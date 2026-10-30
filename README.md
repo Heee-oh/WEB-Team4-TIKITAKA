@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">🏆 BidWin (비드윈)</h1>
   <p align="center">
-    <img alt="Frame 1" src="https://github.com/user-attachments/assets/59888442-7f60-472e-b539-0f4c9f1d9265" />
+    <img alt="Frame 1" src="docs/images/banner.png" />
     <br>
     <strong>급하게 처분해야 할 물건을 위한 하향경매 플랫폼</strong>
   </p>
@@ -94,7 +94,7 @@ Bidwin은 다양한 경매 방식을 통해 판매자와 구매자가 적정 거
   <tbody>
     <tr>
       <td align="center" height="420">
-        <img alt="하향-즉구" src="https://github.com/user-attachments/assets/f21822bf-493b-464b-b7c3-3b0ef790314d" />
+        <img alt="하향-즉구" src="docs/images/demos/descending-auction.gif" />
       </td>
     </tr>
   </tbody>
@@ -109,7 +109,7 @@ Bidwin은 다양한 경매 방식을 통해 판매자와 구매자가 적정 거
   <tbody>
     <tr>
       <td align="center" height="420">
-        <img alt="상향-입찰" src="https://github.com/user-attachments/assets/d5db682b-c2de-45b1-b416-d3143e481a4e" />
+        <img alt="상향-입찰" src="docs/images/demos/ascending-auction.gif" />
       </td>
     </tr>
   </tbody>
@@ -125,7 +125,7 @@ Bidwin은 다양한 경매 방식을 통해 판매자와 구매자가 적정 거
   <tbody>
     <tr>
       <td align="center" height="420">
-        <img alt="상향-밀봉" src="https://github.com/user-attachments/assets/334142eb-4624-4491-aee3-2ef98138ff22" />
+        <img alt="상향-밀봉" src="docs/images/demos/sealed-bid.gif" />
       </td>
     </tr>
   </tbody>
@@ -140,7 +140,7 @@ Bidwin은 다양한 경매 방식을 통해 판매자와 구매자가 적정 거
   <tbody>
     <tr>
       <td align="center" height="420">
-        <img alt="상향-즉구" src="https://github.com/user-attachments/assets/80c57f09-6fb3-4d58-8a3b-19b03ec0e796" />
+        <img alt="상향-즉구" src="docs/images/demos/buy-now.gif" />
       </td>
     </tr>
   </tbody>
@@ -151,7 +151,7 @@ Bidwin은 다양한 경매 방식을 통해 판매자와 구매자가 적정 거
 
 ### 4.1 시스템 아키텍처
 
-<img alt="Section 1" src="https://github.com/user-attachments/assets/11abe6b0-6e54-4b12-a824-ac0128fdf207" />
+<img alt="Section 1" src="docs/images/architecture.png" />
 
 
 ### 4.2 ERD
@@ -437,7 +437,7 @@ bidwin-front/src
   </thead>
   <tbody>
     <tr>
-      <td align="center"><img width="354" height="473" alt="image" src="https://github.com/user-attachments/assets/49de5533-0d32-4b70-976a-750835347aeb" />
+      <td align="center"><img width="354" height="473" alt="image" src="docs/images/team/rootachieve.png" />
 </td>
       <td align="center"><b>김근성</b><br><sub>팀장, BE</sub></td>
       <td>
@@ -453,7 +453,7 @@ bidwin-front/src
       </td>
     </tr>
     <tr>
-      <td align="center"><img width="354" height="472" alt="image" src="https://github.com/user-attachments/assets/bf79a8ed-b853-49f3-9410-4f605bbcfe43" />
+      <td align="center"><img width="354" height="472" alt="image" src="docs/images/team/heee-oh.png" />
 </td>
       <td align="center"><b>허찬욱</b><br><sub>BE</sub></td>
       <td>
@@ -469,7 +469,7 @@ bidwin-front/src
       </td>
     </tr>
     <tr>
-      <td align="center"><img width="413" height="531" alt="image" src="https://github.com/user-attachments/assets/7e6e77dc-7b97-4f0b-a29f-b9823e314c8a" />
+      <td align="center"><img width="413" height="531" alt="image" src="docs/images/team/rhoo-se.png" />
 </td>
       <td align="center"><b>노승억</b><br><sub>BE</sub></td>
       <td>
