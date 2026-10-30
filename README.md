@@ -305,32 +305,32 @@ bidwin-front/src
 
 ## 5. 기술적 성과
 ### 김근성
-- [[김근성] 실행계획·인덱스·데이터 분포로 경매 마감 SQL 병목 추적 (5,001만 행 → 1만 행)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-%EC%8B%A4%ED%96%89%EA%B3%84%ED%9A%8D%C2%B7%EC%9D%B8%EB%8D%B1%EC%8A%A4%C2%B7%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%B6%84%ED%8F%AC%EB%A1%9C-%EA%B2%BD%EB%A7%A4-%EB%A7%88%EA%B0%90-SQL-%EB%B3%91%EB%AA%A9-%EC%B6%94%EC%A0%81-(5,001%EB%A7%8C-%ED%96%89-%E2%86%92-1%EB%A7%8C-%ED%96%89))
-- [[김근성] 단건 정산에서 Native Set‐based 정산까지 (21.15s → 1.05s)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-%EB%8B%A8%EA%B1%B4-%EC%A0%95%EC%82%B0%EC%97%90%EC%84%9C-Native-Set%E2%80%90based-%EC%A0%95%EC%82%B0%EA%B9%8C%EC%A7%80-(21.15s-%E2%86%92-1.05s))
-- [[김근성] SSE의 DB 커넥션 수명 결합 문제 해결](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-SSE%EC%9D%98-DB-%EC%BB%A4%EB%84%A5%EC%85%98-%EC%88%98%EB%AA%85-%EA%B2%B0%ED%95%A9-%EB%AC%B8%EC%A0%9C-%ED%95%B4%EA%B2%B0)
-- [[김근성] 27회의 부하 테스트를 통한 SSE 병목 분리와 안정성 검증](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-27%ED%9A%8C%EC%9D%98-%EB%B6%80%ED%95%98-%ED%85%8C%EC%8A%A4%ED%8A%B8%EB%A5%BC-%ED%86%B5%ED%95%9C-SSE-%EB%B3%91%EB%AA%A9-%EB%B6%84%EB%A6%AC%EC%99%80-%EC%95%88%EC%A0%95%EC%84%B1-%EA%B2%80%EC%A6%9D)
-- [[김근성] 반정규화, 커버링 인덱스로 SSE 초기 스냅샷 개선 (p95 5.508s → 2.931ms Drop 2,454 → 0)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-%EB%B0%98%EC%A0%95%EA%B7%9C%ED%99%94,-%EC%BB%A4%EB%B2%84%EB%A7%81-%EC%9D%B8%EB%8D%B1%EC%8A%A4%EB%A1%9C-SSE-%EC%B4%88%EA%B8%B0-%EC%8A%A4%EB%83%85%EC%83%B7-%EA%B0%9C%EC%84%A0-(p95-5.508s-%E2%86%92-2.931ms---Drop-2,454-%E2%86%92-0))
-- [[김근성] Caffeine Single‐flight로 SSE 연결 폭주 개선 (25.83s → 4.73s)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-Caffeine-Single%E2%80%90flight%EB%A1%9C-SSE-%EC%97%B0%EA%B2%B0-%ED%8F%AD%EC%A3%BC-%EA%B0%9C%EC%84%A0-(25.83s-%E2%86%92-4.73s))
-- [[김근성] Top‐K 알고리즘 도입을 통한 가격순 정렬 개선 (45s → 20s)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-Top%E2%80%90K-%EC%95%8C%EA%B3%A0%EB%A6%AC%EC%A6%98-%EB%8F%84%EC%9E%85%EC%9D%84-%ED%86%B5%ED%95%9C-%EA%B0%80%EA%B2%A9%EC%88%9C-%EC%A0%95%EB%A0%AC-%EA%B0%9C%EC%84%A0-(45s-%E2%86%92-20s))
-- [[김근성] 세션 고정·자격 변경·탈취 지속성까지 고려한 세션 인증 설계](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-%EC%84%B8%EC%85%98-%EA%B3%A0%EC%A0%95%C2%B7%EC%9E%90%EA%B2%A9-%EB%B3%80%EA%B2%BD%C2%B7%ED%83%88%EC%B7%A8-%EC%A7%80%EC%86%8D%EC%84%B1%EA%B9%8C%EC%A7%80-%EA%B3%A0%EB%A0%A4%ED%95%9C-%EC%84%B8%EC%85%98-%EC%9D%B8%EC%A6%9D-%EC%84%A4%EA%B3%84)
+- [[김근성] 실행계획·인덱스·데이터 분포로 경매 마감 SQL 병목 추적 (5,001만 행 → 1만 행)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-%EC%8B%A4%ED%96%89%EA%B3%84%ED%9A%8D%C2%B7%EC%9D%B8%EB%8D%B1%EC%8A%A4%C2%B7%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%B6%84%ED%8F%AC%EB%A1%9C-%EA%B2%BD%EB%A7%A4-%EB%A7%88%EA%B0%90-SQL-%EB%B3%91%EB%AA%A9-%EC%B6%94%EC%A0%81-(5,001%EB%A7%8C-%ED%96%89-%E2%86%92-1%EB%A7%8C-%ED%96%89))
+- [[김근성] 단건 정산에서 Native Set‐based 정산까지 (21.15s → 1.05s)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-%EB%8B%A8%EA%B1%B4-%EC%A0%95%EC%82%B0%EC%97%90%EC%84%9C-Native-Set%E2%80%90based-%EC%A0%95%EC%82%B0%EA%B9%8C%EC%A7%80-(21.15s-%E2%86%92-1.05s))
+- [[김근성] SSE의 DB 커넥션 수명 결합 문제 해결](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-SSE%EC%9D%98-DB-%EC%BB%A4%EB%84%A5%EC%85%98-%EC%88%98%EB%AA%85-%EA%B2%B0%ED%95%A9-%EB%AC%B8%EC%A0%9C-%ED%95%B4%EA%B2%B0)
+- [[김근성] 27회의 부하 테스트를 통한 SSE 병목 분리와 안정성 검증](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-27%ED%9A%8C%EC%9D%98-%EB%B6%80%ED%95%98-%ED%85%8C%EC%8A%A4%ED%8A%B8%EB%A5%BC-%ED%86%B5%ED%95%9C-SSE-%EB%B3%91%EB%AA%A9-%EB%B6%84%EB%A6%AC%EC%99%80-%EC%95%88%EC%A0%95%EC%84%B1-%EA%B2%80%EC%A6%9D)
+- [[김근성] 반정규화, 커버링 인덱스로 SSE 초기 스냅샷 개선 (p95 5.508s → 2.931ms Drop 2,454 → 0)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-%EB%B0%98%EC%A0%95%EA%B7%9C%ED%99%94,-%EC%BB%A4%EB%B2%84%EB%A7%81-%EC%9D%B8%EB%8D%B1%EC%8A%A4%EB%A1%9C-SSE-%EC%B4%88%EA%B8%B0-%EC%8A%A4%EB%83%85%EC%83%B7-%EA%B0%9C%EC%84%A0-(p95-5.508s-%E2%86%92-2.931ms---Drop-2,454-%E2%86%92-0))
+- [[김근성] Caffeine Single‐flight로 SSE 연결 폭주 개선 (25.83s → 4.73s)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-Caffeine-Single%E2%80%90flight%EB%A1%9C-SSE-%EC%97%B0%EA%B2%B0-%ED%8F%AD%EC%A3%BC-%EA%B0%9C%EC%84%A0-(25.83s-%E2%86%92-4.73s))
+- [[김근성] Top‐K 알고리즘 도입을 통한 가격순 정렬 개선 (45s → 20s)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-Top%E2%80%90K-%EC%95%8C%EA%B3%A0%EB%A6%AC%EC%A6%98-%EB%8F%84%EC%9E%85%EC%9D%84-%ED%86%B5%ED%95%9C-%EA%B0%80%EA%B2%A9%EC%88%9C-%EC%A0%95%EB%A0%AC-%EA%B0%9C%EC%84%A0-(45s-%E2%86%92-20s))
+- [[김근성] 세션 고정·자격 변경·탈취 지속성까지 고려한 세션 인증 설계](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EA%B9%80%EA%B7%BC%EC%84%B1%5D-%EC%84%B8%EC%85%98-%EA%B3%A0%EC%A0%95%C2%B7%EC%9E%90%EA%B2%A9-%EB%B3%80%EA%B2%BD%C2%B7%ED%83%88%EC%B7%A8-%EC%A7%80%EC%86%8D%EC%84%B1%EA%B9%8C%EC%A7%80-%EA%B3%A0%EB%A0%A4%ED%95%9C-%EC%84%B8%EC%85%98-%EC%9D%B8%EC%A6%9D-%EC%84%A4%EA%B3%84)
 
 
 ### 허찬욱
-- [[허찬욱] 20만 건 부하테스트 직후 JVM OOM — 대량 조회 메모리 병목 분석](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-20만-건-부하테스트-직후-JVM-OOM-—-대량-조회-메모리-병목-분석)
-- [[허찬욱] 가격 오름차순 Top‐K 조회 최적화 (p99 약 21s → 33ms)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-가격-오름차순-Top%E2%80%90K-조회-최적화-(p99-약-21s-→-33ms))
-- [[허찬욱] 최신·마감임박순 정렬 병목 개선 — 필터 미기여 인덱스 교체 (p95 27.7s → 26.7ms)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-최신·마감임박순-정렬-병목-개선-—-필터-미기여-인덱스-교체-(p95-27.7s-→-26.7ms))
-- [[허찬욱] 추천순 JOIN·GROUP BY 병목 개선 — bid_count 반정규화 (403ms → 0.4ms)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-추천순-JOIN·GROUP-BY-병목-개선-—-bid_count-반정규화-(403ms-→-0.4ms))
-- [[허찬욱] 목록 조회 트랜잭션 제거 검토 — 측정 후 미채택 (Hikari Acquire 686.9ms → 95.5ms)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-목록-조회-트랜잭션-제거-검토-—-측정-후-미채택-(Hikari-Acquire-686.9ms-→-95.5ms))
-- [[허찬욱] 목록 COUNT 병목 개선 — 캐시 반려](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-목록-COUNT-병목-개선-—-캐시-반려)
-- [[허찬욱] 하향 가격 정렬 1,000 RPS 병목 개선 — 30초 세대 스냅샷 (16.5s → 2.74ms)](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-하향-가격-정렬-1,000-RPS-병목-개선-—-30초-세대-스냅샷-(16.5s-→-2.74ms))
-- [[허찬욱] MySQL n‐gram FULLTEXT 검색 검토 및 미도입 결정](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-MySQL-n%E2%80%90gram-FULLTEXT-검색-검토-및-미도입-결정)
+- [[허찬욱] 20만 건 부하테스트 직후 JVM OOM — 대량 조회 메모리 병목 분석](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-20만-건-부하테스트-직후-JVM-OOM-—-대량-조회-메모리-병목-분석)
+- [[허찬욱] 가격 오름차순 Top‐K 조회 최적화 (p99 약 21s → 33ms)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%ED%97%88%EC%B0%AC%EC%9A%B1%5D-%ED%95%98%ED%96%A5%EA%B2%BD%EB%A7%A4-%EB%82%AE%EC%9D%80-%EA%B0%80%EA%B2%A9%EC%88%9C-Top%E2%80%90K-%EC%A1%B0%ED%9A%8C-%EC%B5%9C%EC%A0%81%ED%99%94-(p99-%EC%95%BD-21s-%E2%86%92-33ms))
+- [[허찬욱] 최신·마감임박순 정렬 병목 개선 — 필터 미기여 인덱스 교체 (p95 27.7s → 26.7ms)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-최신·마감임박순-정렬-병목-개선-—-필터-미기여-인덱스-교체-(p95-27.7s-→-26.7ms))
+- [[허찬욱] 추천순 JOIN·GROUP BY 병목 개선 — bid_count 반정규화 (403ms → 0.4ms)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-추천순-JOIN·GROUP-BY-병목-개선-—-bid_count-반정규화-(403ms-→-0.4ms))
+- [[허찬욱] 목록 조회 트랜잭션 제거 검토 — 측정 후 미채택 (Hikari Acquire 686.9ms → 95.5ms)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-목록-조회-트랜잭션-제거-검토-—-측정-후-미채택-(Hikari-Acquire-686.9ms-→-95.5ms))
+- [[허찬욱] 목록 COUNT 병목 개선 — 캐시 반려](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-목록-COUNT-병목-개선-—-캐시-반려)
+- [[허찬욱] 하향 가격 정렬 1,000 RPS 병목 개선 — 30초 세대 스냅샷 (16.5s → 2.74ms)](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-하향-가격-정렬-1,000-RPS-병목-개선-—-30초-세대-스냅샷-(16.5s-→-2.74ms))
+- [[허찬욱] MySQL n‐gram FULLTEXT 검색 검토 및 미도입 결정](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B허찬욱%5D-MySQL-n%E2%80%90gram-FULLTEXT-검색-검토-및-미도입-결정)
 
 
 ### 노승억
-- [[노승억] 입찰 처리량은 왜 240 RPS에서 멈추는가 — MVP 성능 측정](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EB%85%B8%EC%8A%B9%EC%96%B5%5D-%EB%8F%99%EC%8B%9C%EC%84%B1-1.-%EC%9E%85%EC%B0%B0-%EC%B2%98%EB%A6%AC%EB%9F%89%EC%9D%80-%EC%99%9C-240-RPS%EC%97%90%EC%84%9C-%EB%A9%88%EC%B6%94%EB%8A%94%EA%B0%80)
-- [[노승억] Redis 원자적 필터, 무엇이 풀리고 무엇이 안 풀렸나 — 아키텍처 개선 및 성능 측정](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EB%85%B8%EC%8A%B9%EC%96%B5%5D--%EB%8F%99%EC%8B%9C%EC%84%B1-2.-Redis-%EC%9B%90%EC%9E%90%EC%A0%81-%ED%95%84%ED%84%B0,-%EB%AC%B4%EC%97%87%EC%9D%B4-%ED%92%80%EB%A6%AC%EA%B3%A0-%EB%AC%B4%EC%97%87%EC%9D%B4-%EC%95%88-%ED%92%80%EB%A0%B8%EB%82%98)
-- [[노승억] 입찰의 성공 실패 판정을 Redis로 이관하게 된다면 응답속도는 얼마나 개선이 될까? — P99 235.6ms → 20.1ms 기대](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EB%85%B8%EC%8A%B9%EC%96%B5%5D-%EB%8F%99%EC%8B%9C%EC%84%B1-3.-%EC%9E%85%EC%B0%B0%EC%9D%98-%EC%84%B1%EA%B3%B5-%EC%8B%A4%ED%8C%A8-%ED%8C%90%EC%A0%95%EC%9D%84-Redis%EB%A1%9C-%EC%9D%B4%EA%B4%80%ED%95%98%EA%B2%8C-%EB%90%9C%EB%8B%A4%EB%A9%B4-%EC%9D%91%EB%8B%B5%EC%86%8D%EB%8F%84%EB%8A%94-%EC%96%BC%EB%A7%88%EB%82%98-%EA%B0%9C%EC%84%A0%EC%9D%B4-%EB%90%A0%EA%B9%8C%3F)
-- [[노승억] 잠금 순서 정렬로 통제할 수 있는 락과 그렇지 않은 락 — performance_schema 기반 실측](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%5B%EB%85%B8%EC%8A%B9%EC%96%B5%5D--%EC%9E%A0%EA%B8%88-%EC%88%9C%EC%84%9C-%EC%A0%95%EB%A0%AC%EB%A1%9C-%ED%86%B5%EC%A0%9C%ED%95%A0-%EC%88%98-%EC%9E%88%EB%8A%94-%EB%9D%BD%EA%B3%BC-%EA%B7%B8%EB%A0%87%EC%A7%80-%EC%95%8A%EC%9D%80-%EB%9D%BD)
+- [[노승억] 입찰 처리량은 왜 240 RPS에서 멈추는가 — MVP 성능 측정](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EB%85%B8%EC%8A%B9%EC%96%B5%5D-%EB%8F%99%EC%8B%9C%EC%84%B1-1.-%EC%9E%85%EC%B0%B0-%EC%B2%98%EB%A6%AC%EB%9F%89%EC%9D%80-%EC%99%9C-240-RPS%EC%97%90%EC%84%9C-%EB%A9%88%EC%B6%94%EB%8A%94%EA%B0%80)
+- [[노승억] Redis 원자적 필터, 무엇이 풀리고 무엇이 안 풀렸나 — 아키텍처 개선 및 성능 측정](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EB%85%B8%EC%8A%B9%EC%96%B5%5D--%EB%8F%99%EC%8B%9C%EC%84%B1-2.-Redis-%EC%9B%90%EC%9E%90%EC%A0%81-%ED%95%84%ED%84%B0,-%EB%AC%B4%EC%97%87%EC%9D%B4-%ED%92%80%EB%A6%AC%EA%B3%A0-%EB%AC%B4%EC%97%87%EC%9D%B4-%EC%95%88-%ED%92%80%EB%A0%B8%EB%82%98)
+- [[노승억] 입찰의 성공 실패 판정을 Redis로 이관하게 된다면 응답속도는 얼마나 개선이 될까? — P99 235.6ms → 20.1ms 기대](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EB%85%B8%EC%8A%B9%EC%96%B5%5D-%EB%8F%99%EC%8B%9C%EC%84%B1-3.-%EC%9E%85%EC%B0%B0%EC%9D%98-%EC%84%B1%EA%B3%B5-%EC%8B%A4%ED%8C%A8-%ED%8C%90%EC%A0%95%EC%9D%84-Redis%EB%A1%9C-%EC%9D%B4%EA%B4%80%ED%95%98%EA%B2%8C-%EB%90%9C%EB%8B%A4%EB%A9%B4-%EC%9D%91%EB%8B%B5%EC%86%8D%EB%8F%84%EB%8A%94-%EC%96%BC%EB%A7%88%EB%82%98-%EA%B0%9C%EC%84%A0%EC%9D%B4-%EB%90%A0%EA%B9%8C%3F)
+- [[노승억] 잠금 순서 정렬로 통제할 수 있는 락과 그렇지 않은 락 — performance_schema 기반 실측](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%5B%EB%85%B8%EC%8A%B9%EC%96%B5%5D--%EC%9E%A0%EA%B8%88-%EC%88%9C%EC%84%9C-%EC%A0%95%EB%A0%AC%EB%A1%9C-%ED%86%B5%EC%A0%9C%ED%95%A0-%EC%88%98-%EC%9E%88%EB%8A%94-%EB%9D%BD%EA%B3%BC-%EA%B7%B8%EB%A0%87%EC%A7%80-%EC%95%8A%EC%9D%80-%EB%9D%BD)
 
 
 ## 6. 기술 스택
@@ -354,11 +354,11 @@ bidwin-front/src
 | :--- | :--- | :---: |
 | **📊 통합 명세서** | 기능 명세서 · 요구사항 명세서 · API 명세서 · 이슈 단위 · 진행 요약 통합 시트 | [바로가기](https://docs.google.com/spreadsheets/d/1orIoqAX5NUv8rB3I7x58Ae_NT1sThZx6XoPvBz1oO6M/edit?gid=480022386#gid=480022386) |
 | **📗 스웨거 (Swagger UI)** | 배포 서버에서 제공하는 HTTP API 문서 | [바로가기](https://api.bidwin.site/swagger-ui/index.html) |
-| **🔗 이슈 관계도** | 이슈 분할과 선후 의존 관계(위상 정렬)를 정리 | [바로가기](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/이슈-관계도) |
-| **🔄 상태 전이도** | 회원 · 경매 · 거래 도메인의 상태 전이 다이어그램 | [바로가기](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/상태-전이도) |
-| **📑 상태 전이표** | 전이 조건과 부수 효과(보증금 처리 등)를 표로 고정 | [바로가기](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/상태-전이표) |
-| **✅ 행위표** | 경매 상태별로 허용되는 사용자 행위 매트릭스 | [바로가기](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/행위표) |
-| **🎨 디자인 시트** | 컬러 · 타이포그래피 · 컴포넌트 스타일 정의서 | [바로가기](https://github.com/softeerbootcamp-8th/WEB-Team4-TIKITAKA/wiki/%EB%94%94%EC%9E%90%EC%9D%B8-%EC%8B%9C%ED%8A%B8) |
+| **🔗 이슈 관계도** | 이슈 분할과 선후 의존 관계(위상 정렬)를 정리 | [바로가기](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/이슈-관계도) |
+| **🔄 상태 전이도** | 회원 · 경매 · 거래 도메인의 상태 전이 다이어그램 | [바로가기](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/상태-전이도) |
+| **📑 상태 전이표** | 전이 조건과 부수 효과(보증금 처리 등)를 표로 고정 | [바로가기](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/상태-전이표) |
+| **✅ 행위표** | 경매 상태별로 허용되는 사용자 행위 매트릭스 | [바로가기](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/행위표) |
+| **🎨 디자인 시트** | 컬러 · 타이포그래피 · 컴포넌트 스타일 정의서 | [바로가기](https://github.com/Heee-oh/WEB-Team4-TIKITAKA/wiki/%EB%94%94%EC%9E%90%EC%9D%B8-%EC%8B%9C%ED%8A%B8) |
 | **🖼️ 와이어프레임** | 전체 화면 구성과 플로우 설계 | [바로가기](https://www.figma.com/design/j9T8YCyN5ILPBUmoHurPlc/Bidwin?node-id=0-1&t=nJuW1NwHBt89iUkY-1) |
 | **📅 일정 관리 (GitHub Project)** | 스프린트 관리 및 Task 분배 | [바로가기](https://github.com/orgs/softeerbootcamp-8th/projects/8) |
 | **📝 전체 문서 관리 (Notion)** | 매일 스크럼, 아이디어 회의, 주간 회고록 | [바로가기](https://softeer04.notion.site/HMG-Softeer-4-TIKITAKA-39f6b34e4aac80bcb442fdccba74ab57?source=copy_link) |
