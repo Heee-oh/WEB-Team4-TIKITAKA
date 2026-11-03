@@ -6,6 +6,7 @@ import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.BidType;
 import com.tikitaka.bidwinback.global.auth.AuthConstant;
 import com.tikitaka.bidwinback.global.auth.AuthMember;
+import com.tikitaka.bidwinback.global.exception.ErrorCode;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.aop.support.StaticMethodMatcherPointcut;
@@ -82,7 +83,7 @@ public class BidLedgerConfiguration {
                     return 0;
                 }
             }
-            String id = requestId();
+            String id = requestId(RedisCommandCatalog.requiresClientKey(name));
             if (target == BidService.class && arguments[3] == BidType.OPEN) {
                 long member = (Long) arguments[0];
                 ledger.submitOpen(member, (Long) arguments[1], (Long) arguments[2], id);
@@ -95,10 +96,11 @@ public class BidLedgerConfiguration {
         return advisor;
     }
 
-    static String requestId() {
+    static String requestId(boolean clientKeyRequired) {
         String id = null;
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes request) {
             id = request.getRequest().getHeader("Idempotency-Key");
+            if (id == null && clientKeyRequired) throw new BidLedgerException(ErrorCode.IDEMPOTENCY_KEY_REQUIRED);
             if (id == null) id = UUID.randomUUID().toString();
             if (request.getResponse() != null) request.getResponse().setHeader("Idempotency-Key", id);
         }

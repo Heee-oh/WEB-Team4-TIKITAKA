@@ -27,6 +27,7 @@ import com.tikitaka.bidwinback.global.exception.GlobalExceptionHandler;
 import com.tikitaka.bidwinback.member.application.MemberService;
 import com.tikitaka.bidwinback.member.domain.entity.Member;
 import com.tikitaka.bidwinback.member.domain.enums.MemberStatus;
+import com.tikitaka.bidwinback.mypage.presentation.MyPageAccountUpdateController;
 import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -85,6 +86,9 @@ class RedisBidApiIntegrationTest {
             .withCommand("--appendonly", "yes", "--appendfsync", "always",
                     "--maxmemory", "128mb", "--maxmemory-policy", "noeviction").withExposedPorts(6379);
 
+    private static final String CHARGE = "/api/v1/mypage/points/charge";
+    private static final String CHARGE_BODY = "{\"amount\":1000}";
+
     private ConfigurableApplicationContext context;
     private JdbcTemplate jdbc;
     private RedisBidRuntime runtime;
@@ -125,7 +129,8 @@ class RedisBidApiIntegrationTest {
                 .thenAnswer(invocation -> jdbc.queryForObject("SELECT status = 'ACTIVE' FROM member WHERE id = ?",
                         Boolean.class, (Long) invocation.getArgument(0)));
         mvc = MockMvcBuilders.standaloneSetup(new RedisBidRequestController(runtime),
-                        new AuctionBidController(context.getBean(BidService.class), null))
+                        new AuctionBidController(context.getBean(BidService.class), null),
+                        new MyPageAccountUpdateController(context.getBean(MemberService.class), null))
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addFilters(new AuthExceptionFilter(context.getBean(tools.jackson.databind.ObjectMapper.class)),
@@ -572,6 +577,64 @@ class RedisBidApiIntegrationTest {
         runtime.processHead();
         assertBalance(member, 1_970_000, 30_000);
         assertThat(number("SELECT COUNT(*) FROM bid WHERE auction_id = ?", f.auction)).isEqualTo(1);
+    }
+
+    @Test
+    void 응답이_503인_충전을_키없이_다시_보내도_두번_반영되지_않는다() throws Exception {
+        Fixture f = fixture(1);
+        long member = f.members.getFirst();
+        // 소비자가 멈춘 상태: 명령은 장부에 남고 waitTimeout 뒤 503이 나간다. 현재 프런트는 Idempotency-Key 없이 다시 보낸다.
+        var first = mvc.perform(post(CHARGE).with(loggedIn(member)).contentType("application/json").content(CHARGE_BODY))
+                .andReturn().getResponse();
+        var retry = mvc.perform(post(CHARGE).with(loggedIn(member)).contentType("application/json").content(CHARGE_BODY))
+                .andReturn().getResponse();
+        while (runtime.processHead()) { }
+        assertThat(number("SELECT total_point FROM member WHERE id = ?", member))
+                .as("첫 응답=%d, 재시도 응답=%d: 한 번의 충전 의도가 두 번 반영되면 안 된다", first.getStatus(), retry.getStatus())
+                .isLessThanOrEqualTo(2_001_000);
+    }
+
+    @Test
+    void 응답이_503인_충전도_응답의_키로_다시_보내면_한번만_반영된다() throws Exception {
+        Fixture f = fixture(1);
+        long member = f.members.getFirst();
+        String key = UUID.randomUUID().toString();
+        var first = mvc.perform(post(CHARGE).with(loggedIn(member)).header("Idempotency-Key", key)
+                        .contentType("application/json").content(CHARGE_BODY))
+                .andExpect(status().isServiceUnavailable()).andReturn().getResponse();
+        assertThat(first.getHeader("Idempotency-Key")).isEqualTo(key);
+        try (var client = Executors.newSingleThreadExecutor()) {
+            var retry = client.submit(() -> mvc.perform(post(CHARGE).with(loggedIn(member))
+                    .header("Idempotency-Key", key).contentType("application/json").content(CHARGE_BODY))
+                    .andReturn().getResponse().getStatus());
+            assertThat(runtime.processHead()).isTrue();
+            assertThat(retry.get(5, TimeUnit.SECONDS)).isEqualTo(200);
+        }
+        assertThat(runtime.processHead()).isFalse();
+        assertThat(number("SELECT total_point FROM member WHERE id = ?", member)).isEqualTo(2_001_000);
+    }
+
+    @Test
+    void 충전은_키가_없으면_장부에_넣지_않고_같은_키의_다른_금액은_거절한다() throws Exception {
+        Fixture f = fixture(1);
+        long member = f.members.getFirst();
+        String sequence = runtime.store.meta().get("seq").toString();
+        mvc.perform(post(CHARGE).with(loggedIn(member)).contentType("application/json").content(CHARGE_BODY))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("BID_400_3"));
+        assertThat(runtime.store.meta().get("seq")).isEqualTo(sequence);
+        assertThat(runtime.store.head()).isNull();
+        String key = UUID.randomUUID().toString();
+        try (var client = Executors.newSingleThreadExecutor()) {
+            var charge = client.submit(() -> mvc.perform(post(CHARGE).with(loggedIn(member)).header("Idempotency-Key", key)
+                    .contentType("application/json").content(CHARGE_BODY)).andReturn().getResponse().getStatus());
+            awaitBarrier();
+            mvc.perform(post(CHARGE).with(loggedIn(member)).header("Idempotency-Key", key)
+                            .contentType("application/json").content("{\"amount\":2000}"))
+                    .andExpect(status().isConflict());
+            assertThat(runtime.processHead()).isTrue();
+            assertThat(charge.get(5, TimeUnit.SECONDS)).isEqualTo(200);
+        }
+        assertThat(number("SELECT total_point FROM member WHERE id = ?", member)).isEqualTo(2_001_000);
     }
 
     private void awaitBarrier() throws Exception {
