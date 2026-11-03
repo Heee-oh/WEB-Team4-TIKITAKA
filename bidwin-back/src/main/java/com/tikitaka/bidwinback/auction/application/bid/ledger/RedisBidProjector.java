@@ -11,6 +11,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 
@@ -26,12 +28,16 @@ final class RedisBidProjector {
     private final TransactionTemplate transaction;
     private final ObjectMapper mapper;
     private final ApplicationContext context;
+    private final LedgerSseNotifier notifier;
 
-    RedisBidProjector(JdbcTemplate jdbc, TransactionTemplate transaction, ObjectMapper mapper, ApplicationContext context) {
+    /** notifier 가 null 이면(소비자를 끈 경우) 기존처럼 커밋 후 리스너가 호출 스레드에서 동기로 발행한다. */
+    RedisBidProjector(JdbcTemplate jdbc, TransactionTemplate transaction, ObjectMapper mapper,
+                      ApplicationContext context, LedgerSseNotifier notifier) {
         this.jdbc = jdbc;
         this.transaction = transaction;
         this.mapper = mapper;
         this.context = context;
+        this.notifier = notifier;
     }
 
     String apply(MapRecord<String, Object, Object> record) {
@@ -134,9 +140,20 @@ final class RedisBidProjector {
         }, keys);
         long bid = keys.getKey().longValue();
         String nickname = jdbc.queryForObject("SELECT nickname FROM member WHERE id = ?", String.class, member);
-        context.publishEvent(new AuctionStateChanged(auction));
-        context.publishEvent(new AuctionBidCreated(auction, bid,
-                BidHistoryItemResponse.of("BID:" + bid, nickname, price, acceptedAt)));
+        var created = new AuctionBidCreated(auction, bid,
+                BidHistoryItemResponse.of("BID:" + bid, nickname, price, acceptedAt));
+        if (notifier == null) {
+            context.publishEvent(new AuctionStateChanged(auction));
+            context.publishEvent(created);
+        } else {
+            // 커밋이 확정된 뒤에만 알리고, 발행(DB 재조회·Redis)은 소비자 스레드 밖에서 한다.
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    notifier.committed(auction, created);
+                }
+            });
+        }
         return new BidResult(bid, auction, member, price, BidStatus.UP, acceptedAt);
     }
 

@@ -39,6 +39,7 @@ public final class RedisBidRuntime implements AutoCloseable {
     final RedisBidStore store;
     final RedisBidProjector projector;
     private ScheduledExecutorService consumerThread;
+    private final LedgerSseNotifier sseNotifier;
     private long retryAfter;
     private long retryDelayMillis = 100;
 
@@ -58,7 +59,8 @@ public final class RedisBidRuntime implements AutoCloseable {
         var redis = new StringRedisTemplate(connection);
         redis.afterPropertiesSet();
         store = new RedisBidStore(redis, properties);
-        projector = new RedisBidProjector(jdbc, transaction, mapper, context);
+        sseNotifier = properties.workerEnabled() ? new LedgerSseNotifier(context) : null;
+        projector = new RedisBidProjector(jdbc, transaction, mapper, context, sseNotifier);
     }
 
     public void initialize() {
@@ -97,6 +99,7 @@ public final class RedisBidRuntime implements AutoCloseable {
                 return thread;
             });
             consumerThread.scheduleWithFixedDelay(this::consume, delay, delay, TimeUnit.MILLISECONDS);
+            sseNotifier.start();
         }
     }
 
@@ -261,6 +264,7 @@ public final class RedisBidRuntime implements AutoCloseable {
                 Thread.currentThread().interrupt();
             }
         }
+        if (sseNotifier != null) sseNotifier.close();
         connection.destroy();
     }
 
