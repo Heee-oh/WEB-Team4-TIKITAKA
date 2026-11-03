@@ -1,0 +1,10 @@
+# 전용 Redis 로그 및 전체 앱의 동일 모드 전환을 준비한 뒤 활성화한다.
+app:
+  bid-ledger:
+    enabled: true
+    host: ${BID_LEDGER_REDIS_HOST:localhost}
+    port: ${BID_LEDGER_REDIS_PORT:6380}
+    password: ${BID_LEDGER_REDIS_PASSWORD:}
+    cache-ttl: 5m
+    wait-timeout: 5s
+    max-backlog: 5000

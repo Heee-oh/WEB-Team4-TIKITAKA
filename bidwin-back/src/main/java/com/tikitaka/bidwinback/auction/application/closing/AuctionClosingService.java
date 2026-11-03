@@ -11,7 +11,6 @@ import com.tikitaka.bidwinback.auction.domain.repository.dto.AuctionClosingCandi
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -41,7 +40,7 @@ public class AuctionClosingService {
         return auctionRepository.findClosingCandidateIds(candidateStatus.name(), limit);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public int closeOne(AuctionStatus candidateStatus, Long auctionId) {
         List<AuctionClosingCandidate> candidates =
                 auctionRepository.findClosingCandidateForUpdateSkipLocked(
