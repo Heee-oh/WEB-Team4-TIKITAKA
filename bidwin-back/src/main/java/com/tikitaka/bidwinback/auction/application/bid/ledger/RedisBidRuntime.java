@@ -228,8 +228,6 @@ public final class RedisBidRuntime implements AutoCloseable {
         return true;
     }
 
-    boolean hasPendingEvents() { return store.head() != null; }
-
     public DepositResponse cachedBalance(long member, DepositResponse fallback) {
         try {
             var redis = new StringRedisTemplate(connection);

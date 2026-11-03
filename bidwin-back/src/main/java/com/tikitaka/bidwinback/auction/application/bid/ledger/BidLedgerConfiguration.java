@@ -72,11 +72,15 @@ public class BidLedgerConfiguration {
             Method method = RedisCommandCatalog.method(name);
             Object[] arguments = invocation.getArguments();
             var ledger = runtime.getObject();
-            if (target == AuctionClosingService.class && method.getName().equals("closeBatch")
-                    && !ledger.hasPendingEvents()
-                    && ((AuctionClosingService) invocation.getThis())
-                    .findClosingCandidateIds((AuctionStatus) arguments[0], 1).isEmpty()) {
-                return 0;
+            // 마감 대상은 시각으로 정해지므로(ended_at <= NOW) 대기 중인 입찰이 대상 유무를 바꿀 수 없다.
+            // OPEN·BID_ONGOING 어느 쪽에도 마감 시각이 지난 경매가 없으면 명령·장벽을 만들지 않는다.
+            // 하나라도 있으면 앞선 수락 이벤트 뒤에서 순서대로 실행해야 하므로 기존처럼 큐에 넣는다.
+            if (target == AuctionClosingService.class && method.getName().equals("closeBatch")) {
+                var closing = (AuctionClosingService) invocation.getThis();
+                if (closing.findClosingCandidateIds(AuctionStatus.OPEN, 1).isEmpty()
+                        && closing.findClosingCandidateIds(AuctionStatus.BID_ONGOING, 1).isEmpty()) {
+                    return 0;
+                }
             }
             String id = requestId();
             if (target == BidService.class && arguments[3] == BidType.OPEN) {
