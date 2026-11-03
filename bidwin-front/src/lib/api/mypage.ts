@@ -210,9 +210,17 @@ export function requestProfileImageReset(): Promise<ApiResult<ProfileImageUpdate
   return deleteJson<ProfileImageUpdateResponse>(`${MYPAGE_API_PATH}/profile-image`)
 }
 
-export function requestDepositCharge(amount: number): Promise<ApiResult<DepositAccount>> {
+/*
+ * 서버가 응답 대기 시간을 넘겨 503을 줘도 충전 명령은 나중에 적용될 수 있다.
+ * 같은 시도의 재전송을 서버가 알아보도록 시도마다 만든 키를 Idempotency-Key로 보낸다.
+ */
+export function requestDepositCharge(
+  amount: number,
+  idempotencyKey: string,
+): Promise<ApiResult<DepositAccount>> {
   return postJson<DepositAccount, { amount: number }>(
     `${MYPAGE_API_PATH}/points/charge`,
     { amount },
+    { 'Idempotency-Key': idempotencyKey },
   )
 }

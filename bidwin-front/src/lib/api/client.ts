@@ -80,10 +80,14 @@ async function requestEnvelope<TData>(
   return { ok: true, data: envelope.data as TData }
 }
 
-function postJson<TData, TBody>(path: string, body: TBody): Promise<ApiResult<TData>> {
+function postJson<TData, TBody>(
+  path: string,
+  body: TBody,
+  headers?: Record<string, string>,
+): Promise<ApiResult<TData>> {
   return requestEnvelope<TData>(path, {
     method: POST_METHOD,
-    headers: { [CONTENT_TYPE_HEADER]: JSON_CONTENT_TYPE },
+    headers: { [CONTENT_TYPE_HEADER]: JSON_CONTENT_TYPE, ...headers },
     body: JSON.stringify(body),
   })
 }

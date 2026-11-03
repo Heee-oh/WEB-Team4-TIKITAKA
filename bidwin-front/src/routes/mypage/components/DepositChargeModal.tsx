@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import Button from '../../../components/ui/Button'
 import Modal from '../../../components/ui/Modal'
@@ -12,6 +12,14 @@ import { DEPOSIT_CHARGE_TEXT } from '../constants'
 const NON_DIGIT_PATTERN = /\D/g
 const POINT_UNIT = 1_000
 const MAX_CHARGE_AMOUNT = 100_000_000
+const SERVICE_UNAVAILABLE_STATUS = 503
+
+function createIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `charge-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
 
 /* 원 단위 입력값을 1,000 같은 천 단위 구분 표기로 보여준다. 상태에는 숫자만 남긴다. */
 function formatAmountDigits(digits: string) {
@@ -43,6 +51,8 @@ function DepositChargeModal({
   const [amount, setAmount] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  /* 처리 여부를 모르는 시도(503·네트워크 실패)는 같은 키·금액으로만 다시 보낸다. */
+  const pendingAttemptRef = useRef<{ key: string; amount: number } | null>(null)
 
   function handleClose() {
     if (isSubmitting) return
@@ -69,13 +79,19 @@ function DepositChargeModal({
 
     setError('')
     setIsSubmitting(true)
-    const result = await requestDepositCharge(value)
+    const pending = pendingAttemptRef.current
+    const attempt = pending?.amount === value ? pending : { key: createIdempotencyKey(), amount: value }
+    pendingAttemptRef.current = attempt
+    const result = await requestDepositCharge(value, attempt.key)
     setIsSubmitting(false)
     if (!result.ok) {
+      const outcomeUnknown = result.status === null || result.status === SERVICE_UNAVAILABLE_STATUS
+      if (!outcomeUnknown) pendingAttemptRef.current = null
       setError(result.message)
       return
     }
 
+    pendingAttemptRef.current = null
     onCharge(result.data)
     showToast(DEPOSIT_CHARGE_TEXT.done)
     setAmount('')
