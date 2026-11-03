@@ -15,7 +15,6 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 
@@ -25,6 +24,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -37,6 +38,7 @@ public final class RedisBidRuntime implements AutoCloseable {
     private final LettuceConnectionFactory connection;
     final RedisBidStore store;
     final RedisBidProjector projector;
+    private ScheduledExecutorService consumerThread;
     private long retryAfter;
     private long retryDelayMillis = 100;
 
@@ -85,6 +87,17 @@ public final class RedisBidRuntime implements AutoCloseable {
             }
             jdbc.update("UPDATE redis_bid_runtime SET enabled = TRUE WHERE id = 1");
         });
+        if (properties.workerEnabled()) {
+            // 앱 공용 스케줄러는 스레드가 1개다. 마감 스케줄러가 이 소비자의 결과를 기다리는 동안
+            // 소비자가 같은 스레드를 얻지 못하면 서로를 5초(waitTimeout)씩 막으므로 전용 스레드를 쓴다.
+            long delay = context.getEnvironment().getProperty("app.bid-ledger.poll-delay-ms", Long.class, 20L);
+            consumerThread = Executors.newSingleThreadScheduledExecutor(task -> {
+                Thread thread = new Thread(task, "bid-ledger-consumer");
+                thread.setDaemon(true);
+                return thread;
+            });
+            consumerThread.scheduleWithFixedDelay(this::consume, delay, delay, TimeUnit.MILLISECONDS);
+        }
     }
 
     public Receipt submitOpen(long member, long auction, long price, String id) {
@@ -189,7 +202,6 @@ public final class RedisBidRuntime implements AutoCloseable {
         throw RedisBidStore.unavailable();
     }
 
-    @Scheduled(fixedDelayString = "${app.bid-ledger.poll-delay-ms:20}")
     public void consume() {
         if (!properties.workerEnabled() || System.nanoTime() < retryAfter) return;
         try {
@@ -241,7 +253,18 @@ public final class RedisBidRuntime implements AutoCloseable {
     }
 
     @Override
-    public void close() { connection.destroy(); }
+    public void close() {
+        if (consumerThread != null) {
+            consumerThread.shutdown();
+            try {
+                if (!consumerThread.awaitTermination(5, TimeUnit.SECONDS)) consumerThread.shutdownNow();
+            } catch (InterruptedException interrupted) {
+                consumerThread.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+        connection.destroy();
+    }
 
     public record Receipt(String requestId, String status, boolean persisted, String resultUrl) { }
     private record OpenPayload(long member, long auction, long price) { }
