@@ -1,5 +1,7 @@
 package com.tikitaka.bidwinback.auction.application.buynow;
 
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveState;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateService;
 import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.domain.entity.Auction;
 import com.tikitaka.bidwinback.auction.domain.entity.AuctionDeposit;
@@ -9,6 +11,7 @@ import com.tikitaka.bidwinback.auction.domain.entity.DownAuction;
 import com.tikitaka.bidwinback.auction.domain.entity.InstantPurchaseRequest;
 import com.tikitaka.bidwinback.auction.domain.entity.UpAuction;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
+import com.tikitaka.bidwinback.auction.domain.enums.AuctionType;
 import com.tikitaka.bidwinback.auction.domain.enums.BidStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.DepositStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.TradeStatus;
@@ -52,6 +55,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -69,6 +73,9 @@ class BuyNowServiceTest {
     private static final LocalDateTime PURCHASED_AT =
             DATABASE_TIME.plusSeconds(1);
     private static final long FINAL_PRICE = 232_000L;
+    private static final AuctionLiveState LIVE_STATE = new AuctionLiveState(
+            AUCTION_ID, 5L, AuctionType.DOWN, AuctionStatus.COMPLETED, FINAL_PRICE, 1L
+    );
 
     @Mock
     private MemberRepository memberRepository;
@@ -93,6 +100,9 @@ class BuyNowServiceTest {
 
     @Mock
     private BuyNowPriceCalculator priceCalculator;
+
+    @Mock
+    private AuctionLiveStateService liveStateService;
 
     @Mock
     private BuyNowTransactionService transactionBoundary;
@@ -127,8 +137,10 @@ class BuyNowServiceTest {
                 auctionTradeRepository,
                 bidRepository,
                 requestRepository,
-                eventPublisher
+                eventPublisher,
+                liveStateService
         );
+        lenient().when(liveStateService.snapshot(AUCTION_ID)).thenReturn(LIVE_STATE);
         buyNowService = new BuyNowService(
                 auctionRepository,
                 priceCalculator,
@@ -252,7 +264,7 @@ class BuyNowServiceTest {
         );
         verify(memberRepository).movePointToLockedIfEnough(MEMBER_ID, FINAL_PRICE);
         verify(request).complete(persistedTrade, FINAL_PRICE);
-        verify(eventPublisher).publishEvent(new AuctionStateChanged(AUCTION_ID));
+        verify(eventPublisher).publishEvent(new AuctionStateChanged(LIVE_STATE));
     }
 
     @Test

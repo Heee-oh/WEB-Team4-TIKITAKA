@@ -3,7 +3,6 @@ package com.tikitaka.bidwinback.auction.infrastructure.sse;
 import com.tikitaka.bidwinback.auction.application.live.AuctionBidHistoryCache;
 import com.tikitaka.bidwinback.auction.application.live.AuctionLiveState;
 import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateCache;
-import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateService;
 import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionType;
@@ -30,7 +29,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = AuctionSseStateChangeListenerTransactionTest.TestConfig.class)
@@ -40,8 +38,6 @@ class AuctionSseStateChangeListenerTransactionTest {
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private PlatformTransactionManager transactionManager;
-    @Autowired
-    private AuctionLiveStateService stateService;
     @Autowired
     private AuctionLiveStateCache stateCache;
     @Autowired
@@ -60,19 +56,18 @@ class AuctionSseStateChangeListenerTransactionTest {
 
     @BeforeEach
     void setUp() {
-        reset(stateService, stateCache, bidHistoryCache, eventBus);
+        reset(stateCache, bidHistoryCache, eventBus);
     }
 
     @Test
     void 트랜잭션이_커밋된_뒤에만_경매_상태를_Redis로_전송한다() {
         // given
-        when(stateService.getState(1L)).thenReturn(state);
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
 
         // when
         transaction.executeWithoutResult(ignored -> {
-            eventPublisher.publishEvent(new AuctionStateChanged(1L));
-            verifyNoInteractions(stateService, eventBus);
+            eventPublisher.publishEvent(new AuctionStateChanged(state));
+            verifyNoInteractions(eventBus);
         });
 
         // then
@@ -82,45 +77,32 @@ class AuctionSseStateChangeListenerTransactionTest {
     }
 
     @Test
-    void 트랜잭션이_롤백되면_경매_상태를_조회하거나_Redis로_전송하지_않는다() {
+    void 트랜잭션이_롤백되면_경매_상태를_Redis로_전송하지_않는다() {
         // given
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
 
         // when
         transaction.executeWithoutResult(status -> {
-            eventPublisher.publishEvent(new AuctionStateChanged(1L));
+            eventPublisher.publishEvent(new AuctionStateChanged(state));
             status.setRollbackOnly();
         });
 
         // then
-        verifyNoInteractions(stateService, eventBus);
+        verifyNoInteractions(eventBus);
         verifyNoInteractions(stateCache);
         verifyNoInteractions(bidHistoryCache);
     }
 
     @Test
-    void 커밋후_snapshot_조회가_실패해도_이미_완료된_비즈니스_결과는_실패하지_않는다() {
-        // given
-        when(stateService.getState(1L)).thenThrow(new IllegalStateException("snapshot failed"));
-        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-
-        // when & then
-        assertThatCode(() -> transaction.executeWithoutResult(ignored ->
-                eventPublisher.publishEvent(new AuctionStateChanged(1L))
-        )).doesNotThrowAnyException();
-    }
-
-    @Test
     void 커밋후_Redis_발행이_실패해도_이미_완료된_비즈니스_결과는_실패하지_않는다() {
         // given
-        when(stateService.getState(1L)).thenReturn(state);
         doThrow(new IllegalStateException("redis down"))
                 .when(eventBus).publish(AuctionSseMessages.state(state));
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
 
         // when & then
         assertThatCode(() -> transaction.executeWithoutResult(ignored ->
-                eventPublisher.publishEvent(new AuctionStateChanged(1L))
+                eventPublisher.publishEvent(new AuctionStateChanged(state))
         )).doesNotThrowAnyException();
     }
 
@@ -131,11 +113,6 @@ class AuctionSseStateChangeListenerTransactionTest {
         @Bean
         PlatformTransactionManager transactionManager() {
             return new TestTransactionManager();
-        }
-
-        @Bean
-        AuctionLiveStateService stateService() {
-            return mock(AuctionLiveStateService.class);
         }
 
         @Bean
@@ -155,13 +132,11 @@ class AuctionSseStateChangeListenerTransactionTest {
 
         @Bean
         AuctionSseStateChangeListener auctionSseStateChangeListener(
-                AuctionLiveStateService stateService,
                 AuctionLiveStateCache stateCache,
                 AuctionBidHistoryCache bidHistoryCache,
                 RedisSseEventBus eventBus
         ) {
             return new AuctionSseStateChangeListener(
-                    stateService,
                     stateCache,
                     bidHistoryCache,
                     eventBus

@@ -1,319 +1,82 @@
 package com.tikitaka.bidwinback.auction.application.bid;
 
-import com.tikitaka.bidwinback.auction.application.live.AuctionBidCreated;
-import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
-import com.tikitaka.bidwinback.auction.application.live.BidPriceCachePreempted;
-import com.tikitaka.bidwinback.auction.domain.AuctionPricePolicy;
-import com.tikitaka.bidwinback.auction.domain.entity.Auction;
-import com.tikitaka.bidwinback.auction.domain.entity.AuctionDeposit;
-import com.tikitaka.bidwinback.auction.domain.entity.Bid;
-import com.tikitaka.bidwinback.auction.domain.entity.SealedBid;
-import com.tikitaka.bidwinback.auction.domain.entity.UpAuction;
-import com.tikitaka.bidwinback.auction.domain.enums.BidStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.BidType;
-import com.tikitaka.bidwinback.auction.domain.exception.AuctionException;
 import com.tikitaka.bidwinback.auction.domain.exception.BidException;
-import com.tikitaka.bidwinback.auction.domain.repository.AuctionDepositRepository;
 import com.tikitaka.bidwinback.auction.domain.repository.AuctionRepository;
-import com.tikitaka.bidwinback.auction.domain.repository.BidRepository;
-import com.tikitaka.bidwinback.auction.domain.repository.SealedBidRepository;
-import com.tikitaka.bidwinback.member.domain.entity.Member;
-import com.tikitaka.bidwinback.member.domain.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.PessimisticLockingFailureException;
-import org.springframework.dao.QueryTimeoutException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
-import static com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus.BID_ONGOING;
-import static com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus.OPEN;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.AUCTION_ALREADY_ENDED;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.AUCTION_NOT_FOUND;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.AUCTION_NOT_ONGOING;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.BID_PHASE_CHANGED;
 import static com.tikitaka.bidwinback.global.exception.ErrorCode.BID_PRICE_TOO_LOW;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.CONCURRENT_BID_CONFLICT;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.INSUFFICIENT_DEPOSIT;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.INVALID_BID_UNIT;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.NOT_UP_AUCTION;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.PRICE_LIMIT_EXCEEDED;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.SEALED_BID_ALREADY_SUBMITTED;
-import static com.tikitaka.bidwinback.global.exception.ErrorCode.SELF_BID_NOT_ALLOWED;
 
+/**
+ * 입찰 진입점. 트랜잭션을 열지 않는다(DB 트랜잭션 구간은 {@link BidTransactionService}).
+ *
+ * <p>Redis 선점과 실패 뒤 가격 캐시 재동기화는 DB 연결을 쥔 채로 하면 안 된다. 롤백 뒤 재동기화는 DB 현재가를
+ * 다시 읽어야 하는데, 트랜잭션 콜백(AFTER_ROLLBACK)에서 REQUIRES_NEW로 읽으면 원 트랜잭션의 연결을 쥔 채 두 번째
+ * 연결을 기다린다. 동시 입찰 수가 풀 크기에 닿으면 모든 연결 보유자가 서로의 두 번째 연결을 기다리며 풀 전체가
+ * 교착한다. 그래서 첫 연결을 반납한 뒤 여기서 처리한다.
+ *
+ * <p>이 클래스에 @Transactional을 붙이면 위 보장이 깨진다. BidServiceTransactionBoundaryTest가 막는다.
+ * 호출자는 트랜잭션 밖에서 불러야 한다(Redis 원장 모드의 워커처럼 이미 트랜잭션 안인 경로는 Redis 선점을 쓰지 않는
+ * 밀봉 입찰뿐이라 재동기화가 필요 없다).
+ */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BidService {
 
-    private static final long BID_UNIT = 1_000L;
-    private static final long SEALED_BID_WINDOW_MINUTES = 5L;
-    private static final long DEPOSIT_RATE_NUMERATOR = 3L;
-    private static final long DEPOSIT_RATE_DENOMINATOR = 10L;
-
-    private final MemberRepository memberRepository;
-    private final AuctionRepository auctionRepository;
-    private final AuctionDepositRepository auctionDepositRepository;
-    private final BidRepository bidRepository;
-    private final ApplicationEventPublisher eventPublisher;
-    private final SealedBidRepository sealedBidRepository;
+    private final BidTransactionService transactionService;
     private final BidPriceCache bidPriceCache;
-  
-    @Transactional
+    private final AuctionRepository auctionRepository;
+
     public BidResult place(
             Long memberId,
             Long auctionId,
             long price,
             BidType bidType
     ) {
-        validateBidPrice(price);
+        BidTransactionService.validateBidPrice(price);
 
         // Redis에서 즉시 원자적으로 승패를 가른다(비교+갱신을 한 번에). SEALED는 이 캐시 대상이 아니다.
-        Long previousPrice = bidType == BidType.OPEN
+        // 트랜잭션 밖이라 선점에 진 요청은 DB 연결을 잡지 않고 바로 거절된다.
+        boolean preemptable = bidType == BidType.OPEN;
+        Long previousPrice = preemptable
                 ? bidPriceCache.tryWinRace(auctionId, price)
                 : null;
         if (bidPriceCache.isLost(previousPrice)) {
             throw new BidException(BID_PRICE_TOO_LOW);
         }
-        if (bidType == BidType.OPEN) {
-            // previousPrice가 null이어도(키가 없었거나, Redis 예외로 결과를 모르는 경우) 등록해둔다.
+
+        try {
+            return transactionService.place(memberId, auctionId, price, bidType);
+        } catch (RuntimeException exception) {
+            // previousPrice가 null이어도(키가 없었거나, Redis 예외로 결과를 모르는 경우) 되돌린다.
             // 특히 예외 케이스는 Redis가 SET을 실제로 실행한 뒤 응답만 못 받았을 수도 있어
             // "안 건드렸다"고 확신할 수 없다. 되돌리기는 "내가 세팅한 값이 아직 그대로일 때만"
             // 작동하므로, 실제로는 안 건드렸던 경우엔 그냥 안전하게 아무 일도 안 일어난다.
-            eventPublisher.publishEvent(new BidPriceCachePreempted(auctionId, price));
-        }
-
-        // bidType은 클라이언트가 인지한 입찰 단계일 뿐이며, 실제 단계는 DB 시각을 사용하는
-        // 조건부 UPDATE가 판정한다. 단계가 바뀌어도 다른 입찰 유형으로 자동 전환하지 않는다.
-        int updatedRows;
-        boolean stateChanged;
-        if (bidType == BidType.OPEN) {
-            updatedRows = updateCurrentPrice(memberId, auctionId, price);
-            stateChanged = true;
-        } else {
-            SealedBidAuctionUpdate update = tryUpdateAuctionForSealedBid(
-                    memberId,
-                    auctionId,
-                    price
-            );
-            updatedRows = update.updatedRows();
-            stateChanged = update.stateChanged();
-        }
-        if (updatedRows != 1) {
-            // 실패 원인을 최신 상태로 다시 판별해 구체적인 도메인 오류로 변환한다. 이 메서드는
-            // 항상 예외를 던져 트랜잭션을 롤백시키므로, 위에서 예약해둔 캐시 재동기화도 실행된다.
-            return rejectBid(memberId, auctionId, price, bidType);
-        }
-
-        Auction auction = auctionRepository.getReferenceById(auctionId);
-        Member bidder = memberRepository.getReferenceById(memberId);
-        reserveDepositForFirstBid(memberId, auctionId, auction, bidder);
-
-        return switch (bidType) {
-            case OPEN -> saveOpenBid(auction, bidder, price);
-            case SEALED -> saveSealedBid(auction, bidder, price, stateChanged);
-        };
-    }
-
-    private void reserveDepositForFirstBid(
-            Long memberId,
-            Long auctionId,
-            Auction auction,
-            Member bidder
-    ) {
-        if (auctionDepositRepository.existsByMemberIdAndAuctionId(memberId, auctionId)) {
-            return;
-        }
-
-        // 시작가는 천원 단위이므로 나눗셈 후 곱해도 30%가 정확하며 곱셈 오버플로도 피한다.
-        long depositAmount = Math.multiplyExact(
-                auction.getStartPrice() / DEPOSIT_RATE_DENOMINATOR,
-                DEPOSIT_RATE_NUMERATOR
-        );
-        int lockedPoints = lockDepositPoint(memberId, depositAmount);
-        if (lockedPoints != 1) {
-            throw new BidException(INSUFFICIENT_DEPOSIT);
-        }
-
-        auctionDepositRepository.save(AuctionDeposit.builder()
-                .member(bidder)
-                .auction(auction)
-                .reservedAmount(depositAmount)
-                .build());
-    }
-
-    private BidResult saveOpenBid(Auction auction, Member bidder, long price) {
-        Bid bid = bidRepository.save(Bid.builder()
-                .auction(auction)
-                .bidder(bidder)
-                .price(price)
-                .status(BidStatus.UP)
-                .build());
-
-        eventPublisher.publishEvent(new AuctionStateChanged(auction.getId()));
-        eventPublisher.publishEvent(AuctionBidCreated.from(bid));
-        return BidResult.from(bid);
-    }
-
-    private BidResult saveSealedBid(
-            Auction auction,
-            Member bidder,
-            long price,
-            boolean stateChanged
-    ) {
-        SealedBid sealedBid;
-        try {
-            sealedBid = sealedBidRepository.saveAndFlush(
-                    SealedBid.builder()
-                            .auction(auction)
-                            .bidder(bidder)
-                            .price(price)
-                            .build()
-            );
-        } catch (DataIntegrityViolationException exception) {
-            throw new BidException(SEALED_BID_ALREADY_SUBMITTED);
-        }
-
-        // 후속 밀봉입찰은 공개 상태가 그대로라 같은 revision의 snapshot을 다시 만들 필요가 없다.
-        if (stateChanged) {
-            eventPublisher.publishEvent(new AuctionStateChanged(auction.getId()));
-        }
-        return BidResult.from(sealedBid);
-    }
-
-    private void validateBidPrice(long price) {
-        if (!AuctionPricePolicy.isAllowed(price)) {
-            throw new BidException(PRICE_LIMIT_EXCEEDED);
-        }
-        if (price <= 0 || price % BID_UNIT != 0) {
-            throw new BidException(INVALID_BID_UNIT);
-        }
-    }
-
-    private int updateCurrentPrice(Long memberId, Long auctionId, long price) {
-        try {
-            return auctionRepository.updateCurrentPriceForBid(
-                    auctionId,
-                    memberId,
-                    price,
-                    BID_UNIT
-            );
-        } catch (PessimisticLockingFailureException | QueryTimeoutException exception) {
-            throw new BidException(CONCURRENT_BID_CONFLICT);
-        }
-    }
-
-    private SealedBidAuctionUpdate tryUpdateAuctionForSealedBid(
-            Long memberId,
-            Long auctionId,
-            long price
-    ) {
-        try {
-            int firstSealedBid = auctionRepository.tryUpdateAuctionForSealedBid(
-                    auctionId,
-                    memberId,
-                    price,
-                    BID_UNIT,
-                    OPEN.name(),
-                    1
-            );
-            if (firstSealedBid == 1) {
-                return new SealedBidAuctionUpdate(1, true);
+            // 이 시점엔 트랜잭션이 롤백되어 연결이 반납된 상태다.
+            if (preemptable) {
+                resyncPriceCache(auctionId, price);
             }
-
-            int subsequentSealedBid = auctionRepository.tryUpdateAuctionForSealedBid(
-                    auctionId,
-                    memberId,
-                    price,
-                    BID_UNIT,
-                    BID_ONGOING.name(),
-                    0
-            );
-            return new SealedBidAuctionUpdate(subsequentSealedBid, false);
-        } catch (PessimisticLockingFailureException | QueryTimeoutException exception) {
-            throw new BidException(CONCURRENT_BID_CONFLICT);
+            throw exception;
         }
     }
 
-    private record SealedBidAuctionUpdate(int updatedRows, boolean stateChanged) {
-    }
-
-    // 즉시구매 흐름은 회원 행을 먼저 잠근 뒤 경매 행을 잠그는 반대 순서라 드물게 순환 대기가
-    // 날 수 있다. 그때도 500이 아니라 기존 동시성 충돌 응답으로 처리되도록 변환한다.
-    private int lockDepositPoint(Long memberId, long depositAmount) {
+    private void resyncPriceCache(Long auctionId, long price) {
         try {
-            return memberRepository.movePointToLockedIfEnough(memberId, depositAmount);
-        } catch (PessimisticLockingFailureException | QueryTimeoutException exception) {
-            throw new BidException(CONCURRENT_BID_CONFLICT);
+            auctionRepository.findCurrentPriceById(auctionId)
+                    .ifPresent(actualPrice -> bidPriceCache.resyncToActualPrice(
+                            auctionId,
+                            price,
+                            actualPrice
+                    ));
+        } catch (RuntimeException exception) {
+            log.atWarn()
+                    .setCause(exception)
+                    .addKeyValue("event", "bid_price_cache_resync_failed")
+                    .addKeyValue("auctionId", auctionId)
+                    .log("롤백된 입찰의 가격 캐시 재동기화에 실패했습니다.");
         }
-    }
-
-    private BidResult rejectBid(
-            Long memberId,
-            Long auctionId,
-            long price,
-            BidType bidType
-    ) {
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new AuctionException(AUCTION_NOT_FOUND));
-
-        // 하향 경매는 즉시구매로만 거래되므로 입찰은 상향 경매에만 허용한다.
-        if (!(auction instanceof UpAuction)) {
-            throw new BidException(NOT_UP_AUCTION);
-        }
-        if (auction.getStatus() != OPEN && auction.getStatus() != BID_ONGOING) {
-            throw new AuctionException(AUCTION_NOT_ONGOING);
-        }
-
-        LocalDateTime databaseTime = auctionRepository.currentDatabaseTime();
-        if (!auction.getEndedAt().isAfter(databaseTime)) {
-            throw new AuctionException(AUCTION_ALREADY_ENDED);
-        }
-        if (currentBidType(auction, databaseTime) != bidType) {
-            throw new BidException(BID_PHASE_CHANGED);
-        }
-        if (auction.getSeller().getId().equals(memberId)) {
-            throw new BidException(SELF_BID_NOT_ALLOWED);
-        }
-        if (price - BID_UNIT < highestAcceptedPriceOf(auction, bidType)) {
-            throw new BidException(BID_PRICE_TOO_LOW);
-        }
-
-        throw new BidException(CONCURRENT_BID_CONFLICT);
-    }
-
-    private BidType currentBidType(Auction auction, LocalDateTime databaseTime) {
-        LocalDateTime sealedBidStartedAt = auction.getEndedAt().minusMinutes(
-                SEALED_BID_WINDOW_MINUTES
-        );
-        return databaseTime.isBefore(sealedBidStartedAt)
-                ? BidType.OPEN
-                : BidType.SEALED;
-    }
-
-    private long currentPriceOf(Auction auction) {
-        if (auction.hasCurrentPrice()) {
-            return auction.getCurrentPrice();
-        }
-
-        // 스키마 변경 전에 생성된 경매만 Bid 최고가로 현재가를 보정한다.
-        Long highestPrice = bidRepository.findHighestPriceByAuctionId(auction.getId());
-        return highestPrice == null ? auction.getStartPrice() : highestPrice;
-    }
-
-    private long highestAcceptedPriceOf(Auction auction, BidType bidType) {
-        long currentPrice = currentPriceOf(auction);
-        if (bidType != BidType.SEALED) {
-            return currentPrice;
-        }
-
-        Long highestSealedPrice = sealedBidRepository.findHighestPriceByAuctionId(
-                auction.getId()
-        );
-        return highestSealedPrice == null
-                ? currentPrice
-                : Math.max(currentPrice, highestSealedPrice);
     }
 }

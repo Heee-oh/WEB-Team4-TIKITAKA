@@ -2,6 +2,7 @@ package com.tikitaka.bidwinback.auction.application.bid.ledger;
 
 import com.tikitaka.bidwinback.auction.application.bid.BidResult;
 import com.tikitaka.bidwinback.auction.application.live.AuctionBidCreated;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateService;
 import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.domain.enums.BidStatus;
 import com.tikitaka.bidwinback.auction.presentation.dto.response.BidHistoryItemResponse;
@@ -143,7 +144,10 @@ final class RedisBidProjector {
         var created = new AuctionBidCreated(auction, bid,
                 BidHistoryItemResponse.of("BID:" + bid, nickname, price, acceptedAt));
         if (notifier == null) {
-            context.publishEvent(new AuctionStateChanged(auction));
+            // 커밋 뒤 리스너가 DB를 읽지 않도록 snapshot을 이 트랜잭션에서 만들어 싣는다.
+            context.publishEvent(new AuctionStateChanged(
+                    context.getBean(AuctionLiveStateService.class).snapshot(auction)
+            ));
             context.publishEvent(created);
         } else {
             // 커밋이 확정된 뒤에만 알리고, 발행(DB 재조회·Redis)은 소비자 스레드 밖에서 한다.

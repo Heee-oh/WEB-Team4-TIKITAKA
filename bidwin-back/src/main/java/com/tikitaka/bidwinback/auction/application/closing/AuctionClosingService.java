@@ -2,6 +2,8 @@ package com.tikitaka.bidwinback.auction.application.closing;
 
 import com.tikitaka.bidwinback.auction.application.deposit.DepositSettlementService;
 import com.tikitaka.bidwinback.auction.application.live.AuctionBidHistoryRevealed;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveState;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateService;
 import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.TradeStatus;
@@ -24,6 +26,7 @@ public class AuctionClosingService {
     private final AuctionTradeRepository auctionTradeRepository;
     private final DepositSettlementService depositSettlementService;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuctionLiveStateService liveStateService;
 
     @Transactional
     public int closeBatch(AuctionStatus candidateStatus, int batchSize) {
@@ -94,8 +97,13 @@ public class AuctionClosingService {
             List<AuctionClosingCandidate> candidates,
             AuctionStatus candidateStatus
     ) {
-        for (AuctionClosingCandidate candidate : candidates) {
-            eventPublisher.publishEvent(new AuctionStateChanged(candidate.getAuctionId()));
+        // 후보마다 조회하면 선점한 행 락을 쥔 시간이 후보 수만큼 늘어난다. 한 번에 읽는다.
+        List<AuctionLiveState> states = liveStateService.snapshots(
+                candidates.stream().map(AuctionClosingCandidate::getAuctionId).toList()
+        );
+        for (int i = 0; i < candidates.size(); i++) {
+            AuctionClosingCandidate candidate = candidates.get(i);
+            eventPublisher.publishEvent(new AuctionStateChanged(states.get(i)));
             // 공개입찰조차 없던 경매(OPEN)는 공개할 밀봉 입찰 내역이 없다.
             if (candidateStatus == AuctionStatus.BID_ONGOING) {
                 eventPublisher.publishEvent(new AuctionBidHistoryRevealed(

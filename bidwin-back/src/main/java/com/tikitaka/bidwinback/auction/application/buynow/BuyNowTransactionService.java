@@ -1,6 +1,7 @@
 package com.tikitaka.bidwinback.auction.application.buynow;
 
 import com.tikitaka.bidwinback.auction.application.live.AuctionBidCreated;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateService;
 import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.domain.AuctionPricePolicy;
 import com.tikitaka.bidwinback.auction.domain.entity.Auction;
@@ -56,6 +57,7 @@ public class BuyNowTransactionService {
     private final BidRepository bidRepository;
     private final InstantPurchaseRequestRepository requestRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuctionLiveStateService liveStateService;
 
     @Transactional
     public BuyNowResult buy(BuyNowCommand command) {
@@ -131,7 +133,11 @@ public class BuyNowTransactionService {
                         .build()
         );
         request.complete(trade, command.finalPrice());
-        eventPublisher.publishEvent(new AuctionStateChanged(command.auctionId()));
+        // 커밋 뒤 리스너가 DB를 읽지 않도록 snapshot을 이 트랜잭션에서 만든다. 낙찰 UPDATE가 네이티브라서
+        // 위에서 적재한 auction 엔티티는 낡았다. 그래서 엔티티가 아니라 DB를 직접 읽는 snapshot을 쓴다.
+        eventPublisher.publishEvent(new AuctionStateChanged(
+                liveStateService.snapshot(command.auctionId())
+        ));
         if (auction instanceof UpAuction) {
             eventPublisher.publishEvent(AuctionBidCreated.from(purchaseBid));
         }
