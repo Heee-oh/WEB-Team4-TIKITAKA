@@ -2,7 +2,7 @@ package com.tikitaka.bidwinback.auction.application.bid.ledger;
 
 import com.tikitaka.bidwinback.auction.application.bid.BidService;
 import com.tikitaka.bidwinback.auction.application.bid.BidPriceCache;
-import com.tikitaka.bidwinback.auction.application.bid.BidPriceCacheRevertListener;
+import com.tikitaka.bidwinback.auction.application.bid.BidTransactionService;
 import com.tikitaka.bidwinback.auction.application.buynow.BuyNowService;
 import com.tikitaka.bidwinback.auction.application.buynow.BuyNowTransactionService;
 import com.tikitaka.bidwinback.auction.application.buynow.BuyNowPriceCalculator;
@@ -624,7 +624,7 @@ class RedisBidApiIntegrationTest {
     @TestConfiguration(proxyBeanMethods = false)
     @EnableAutoConfiguration
     @AutoConfigurationPackage(basePackages = "com.tikitaka.bidwinback")
-    @Import({BidService.class, BidPriceCache.class, BidPriceCacheRevertListener.class, AuctionLiveStateService.class, JpaAuditingConfig.class,
+    @Import({BidService.class, BidPriceCache.class, BidTransactionService.class, AuctionLiveStateService.class, JpaAuditingConfig.class,
             BidLedgerConfiguration.class, DepositSettlementServiceImpl.class, BuyNowService.class,
             BuyNowTransactionService.class, BuyNowPriceCalculator.class, MemberService.class,
             TradeConfirmationService.class, AuctionClosingService.class, SchedulingConfig.class})
