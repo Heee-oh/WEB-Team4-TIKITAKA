@@ -28,6 +28,11 @@ final class RedisCommandCatalog {
             AuctionClosingService.class, Set.of("closeBatch", "closeOne"),
             DepositSettlementServiceImpl.class, Set.of("topUpToFinalPrice", "refund", "refundLosingDeposits",
                     "transferToSeller", "forfeit"));
+    /**
+     * 같은 요청을 다시 보내면 별개 명령으로 또 적용되는, 도메인 멱등 장치가 없는 명령.
+     * 대기 시간이 지나 503이 나가도 명령은 장부에 남아 실행되므로 클라이언트가 보낸 키로만 재전송을 식별할 수 있다.
+     */
+    private static final Set<String> CLIENT_KEY_REQUIRED = Set.of("MemberService.chargePoint");
     private static final Map<String, Method> METHODS = new HashMap<>();
     static {
         TARGETS.forEach((type, names) -> {
@@ -40,6 +45,8 @@ final class RedisCommandCatalog {
     static boolean matches(Class<?> type, Method method) {
         return TARGETS.getOrDefault(type, Set.of()).contains(method.getName());
     }
+
+    static boolean requiresClientKey(String name) { return CLIENT_KEY_REQUIRED.contains(name); }
 
     static String key(Class<?> type, Method method) { return type.getSimpleName() + "." + method.getName(); }
 
