@@ -1,6 +1,7 @@
 package com.tikitaka.bidwinback.auction.application.bid;
 
 import com.tikitaka.bidwinback.auction.application.live.AuctionBidCreated;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateService;
 import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.application.live.BidPriceCachePreempted;
 import com.tikitaka.bidwinback.auction.domain.AuctionPricePolicy;
@@ -60,6 +61,7 @@ public class BidService {
     private final ApplicationEventPublisher eventPublisher;
     private final SealedBidRepository sealedBidRepository;
     private final BidPriceCache bidPriceCache;
+    private final AuctionLiveStateService liveStateService;
   
     @Transactional
     public BidResult place(
@@ -152,7 +154,7 @@ public class BidService {
                 .status(BidStatus.UP)
                 .build());
 
-        eventPublisher.publishEvent(new AuctionStateChanged(auction.getId()));
+        publishStateChanged(auction.getId());
         eventPublisher.publishEvent(AuctionBidCreated.from(bid));
         return BidResult.from(bid);
     }
@@ -178,9 +180,14 @@ public class BidService {
 
         // 후속 밀봉입찰은 공개 상태가 그대로라 같은 revision의 snapshot을 다시 만들 필요가 없다.
         if (stateChanged) {
-            eventPublisher.publishEvent(new AuctionStateChanged(auction.getId()));
+            publishStateChanged(auction.getId());
         }
         return BidResult.from(sealedBid);
+    }
+
+    // 커밋 뒤 리스너가 DB를 다시 읽지 않도록 snapshot을 이 트랜잭션에서 만들어 싣는다.
+    private void publishStateChanged(long auctionId) {
+        eventPublisher.publishEvent(new AuctionStateChanged(liveStateService.snapshot(auctionId)));
     }
 
     private void validateBidPrice(long price) {

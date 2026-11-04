@@ -3,6 +3,8 @@ package com.tikitaka.bidwinback.auction.application.closing;
 import com.tikitaka.bidwinback.auction.domain.entity.AuctionDeposit;
 import com.tikitaka.bidwinback.auction.domain.entity.UpAuction;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionCategory;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveState;
+import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.DepositStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.TradeType;
@@ -15,6 +17,8 @@ import jakarta.persistence.EntityTransaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -38,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
         "app.storage.s3.bucket=test-bucket",
         "app.auction.closing-interval=24h"
 })
+@RecordApplicationEvents
 class AuctionClosingServiceIntegrationTest {
 
     private static final long BID_UNIT = 1_000L;
@@ -48,6 +53,9 @@ class AuctionClosingServiceIntegrationTest {
 
     @Autowired
     private AuctionClosingService auctionClosingService;
+
+    @Autowired
+    private ApplicationEvents applicationEvents;
 
     @Autowired
     private AuctionClosingBatchProcessor batchProcessor;
@@ -122,6 +130,23 @@ class AuctionClosingServiceIntegrationTest {
             executor.shutdownNow();
             executor.awaitTermination(5, TimeUnit.SECONDS);
         }
+    }
+
+    @Test
+    void 마감이_발행하는_상태_이벤트는_마감_직후의_상태와_확정가를_담는다() {
+        // 마감 UPDATE와 거래 INSERT가 네이티브라, 엔티티가 아니라 DB를 직접 읽어야 마감 후 값이 나간다.
+        Long auctionId = createEndedAuctionWithBid();
+
+        auctionClosingService.closeBatch(AuctionStatus.BID_ONGOING, BATCH_SIZE);
+
+        List<AuctionStateChanged> events = applicationEvents.stream(AuctionStateChanged.class)
+                .filter(event -> event.auctionId() == auctionId)
+                .toList();
+        assertThat(events).hasSize(1);
+        AuctionLiveState state = events.getFirst().state();
+        assertThat(state.status()).isEqualTo(AuctionStatus.COMPLETED);
+        assertThat(state.currentPrice()).isEqualTo(START_PRICE + BID_UNIT);
+        assertThat(state.revision()).isEqualTo(2L);
     }
 
     @Test

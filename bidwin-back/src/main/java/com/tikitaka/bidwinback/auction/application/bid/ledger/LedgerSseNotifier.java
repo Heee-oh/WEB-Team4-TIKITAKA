@@ -3,7 +3,7 @@ package com.tikitaka.bidwinback.auction.application.bid.ledger;
 import com.tikitaka.bidwinback.auction.application.live.AuctionBidCreated;
 import com.tikitaka.bidwinback.auction.application.live.AuctionBidHistoryCache;
 import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateCache;
-import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateService;
 import com.tikitaka.bidwinback.auction.infrastructure.sse.AuctionBidSseListener;
 import com.tikitaka.bidwinback.auction.infrastructure.sse.AuctionSseStateChangeListener;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +29,7 @@ final class LedgerSseNotifier implements AutoCloseable {
     private Thread thread;
     private boolean closed;
     private AuctionSseStateChangeListener stateListener;
+    private AuctionLiveStateService liveStateService;
     private AuctionBidSseListener bidListener;
 
     LedgerSseNotifier(ApplicationContext context) {
@@ -73,14 +74,26 @@ final class LedgerSseNotifier implements AutoCloseable {
                 if (stateListener == null) {
                     stateListener = context.getBean(AuctionSseStateChangeListener.class);
                     bidListener = context.getBean(AuctionBidSseListener.class);
+                    liveStateService = context.getBean(AuctionLiveStateService.class);
                 }
                 // 기존 처리 순서(상태 → 입찰)를 유지한다. 두 리스너는 발행 실패를 스스로 격리한다.
-                for (long auction : auctions) stateListener.publishCommittedState(new AuctionStateChanged(auction));
+                // 트랜잭션 밖이라 getState(REQUIRES_NEW)가 연결을 하나만 쓴다. 경매마다 실패를 격리한다.
+                for (long auction : auctions) publishState(auction);
                 for (AuctionBidCreated bid : bids) bidListener.publishBid(bid);
             } catch (RuntimeException failure) {
                 log.atWarn().setCause(failure).addKeyValue("event", "bid_ledger_sse_failed")
                         .log("입찰 SSE 알림을 발행하지 못했습니다. 다음 변경이나 재연결 snapshot으로 수렴합니다.");
             }
+        }
+    }
+
+    private void publishState(long auction) {
+        try {
+            stateListener.publish(liveStateService.getState(auction));
+        } catch (RuntimeException failure) {
+            log.atWarn().setCause(failure).addKeyValue("event", "bid_ledger_state_snapshot_failed")
+                    .addKeyValue("auctionId", auction)
+                    .log("경매 상태 snapshot을 읽지 못했습니다. 다음 변경이나 재연결 snapshot으로 수렴합니다.");
         }
     }
 

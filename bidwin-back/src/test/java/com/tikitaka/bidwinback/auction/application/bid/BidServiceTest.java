@@ -3,6 +3,8 @@ package com.tikitaka.bidwinback.auction.application.bid;
 import com.tikitaka.bidwinback.auction.domain.entity.Auction;
 
 import com.tikitaka.bidwinback.auction.application.live.AuctionBidCreated;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveState;
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveStateService;
 import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.application.live.BidPriceCachePreempted;
 import com.tikitaka.bidwinback.auction.domain.entity.AuctionDeposit;
@@ -11,6 +13,7 @@ import com.tikitaka.bidwinback.auction.domain.entity.DownAuction;
 import com.tikitaka.bidwinback.auction.domain.entity.SealedBid;
 import com.tikitaka.bidwinback.auction.domain.entity.UpAuction;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
+import com.tikitaka.bidwinback.auction.domain.enums.AuctionType;
 import com.tikitaka.bidwinback.auction.domain.enums.BidStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.BidType;
 import com.tikitaka.bidwinback.auction.domain.enums.DepositStatus;
@@ -80,6 +83,9 @@ class BidServiceTest {
     private static final LocalDateTime DATABASE_TIME =
             LocalDateTime.of(2026, 7, 30, 12, 34, 55);
     private static final LocalDateTime BID_AT = DATABASE_TIME.plusSeconds(1);
+    private static final AuctionLiveState LIVE_STATE = new AuctionLiveState(
+            AUCTION_ID, 3L, AuctionType.UP, AuctionStatus.BID_ONGOING, PRICE, 2L
+    );
 
     @Mock
     private MemberRepository memberRepository;
@@ -101,6 +107,9 @@ class BidServiceTest {
 
     @Mock
     private BidPriceCache bidPriceCache;
+
+    @Mock
+    private AuctionLiveStateService liveStateService;
 
     @Mock
     private Member bidder;
@@ -128,6 +137,7 @@ class BidServiceTest {
         // Mockito는 Long처럼 박싱된 숫자 타입의 기본 반환값을 null이 아닌 0으로 준다.
         // 스텁 안 해두면 previousPrice가 0으로 잡혀 "Redis에서 선점 성공"으로 오인된다.
         lenient().when(bidPriceCache.tryWinRace(any(), anyLong())).thenReturn(null);
+        lenient().when(liveStateService.snapshot(AUCTION_ID)).thenReturn(LIVE_STATE);
     }
 
     @Test
@@ -141,7 +151,7 @@ class BidServiceTest {
 
         ArgumentCaptor<Bid> bidCaptor = ArgumentCaptor.forClass(Bid.class);
         verify(bidRepository).save(bidCaptor.capture());
-        verify(eventPublisher).publishEvent(new AuctionStateChanged(AUCTION_ID));
+        verify(eventPublisher).publishEvent(new AuctionStateChanged(LIVE_STATE));
         verify(eventPublisher).publishEvent(new AuctionBidCreated(
                 AUCTION_ID,
                 BID_ID,
@@ -280,7 +290,7 @@ class BidServiceTest {
         bidService.place(MEMBER_ID, AUCTION_ID, PRICE, BidType.SEALED);
 
         // then
-        verify(eventPublisher).publishEvent(new AuctionStateChanged(AUCTION_ID));
+        verify(eventPublisher).publishEvent(new AuctionStateChanged(LIVE_STATE));
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.tikitaka.bidwinback.auction.application.bid;
 
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveState;
+import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.domain.AuctionPricePolicy;
 import com.tikitaka.bidwinback.auction.domain.entity.Bid;
 import com.tikitaka.bidwinback.auction.domain.entity.UpAuction;
@@ -21,6 +23,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -40,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 @SpringBootTest(properties = "app.storage.s3.bucket=test-bucket")
+@RecordApplicationEvents
 class BidServiceIntegrationTest {
 
     private static final long START_PRICE = 100_000L;
@@ -53,6 +58,9 @@ class BidServiceIntegrationTest {
 
     @Autowired
     private BidService bidService;
+
+    @Autowired
+    private ApplicationEvents applicationEvents;
 
     @Autowired
     private EntityManagerFactory entityManagerFactory;
@@ -352,6 +360,26 @@ class BidServiceIntegrationTest {
                 .isEqualTo(new AuctionSnapshot(START_PRICE, AuctionStatus.OPEN));
         assertThat(findMemberPointSnapshot(bidderId))
                 .isEqualTo(new MemberPointSnapshot(insufficientPoint, 0L));
+    }
+
+    @Test
+    void 입찰이_발행하는_상태_이벤트는_입찰_직후의_revision과_현재가와_입찰수를_담는다() {
+        Fixture fixture = createFixture(1);
+
+        bidService.place(fixture.bidderIds().getFirst(), fixture.auctionId(), FIRST_BID_PRICE, BidType.OPEN);
+
+        List<AuctionStateChanged> events = applicationEvents.stream(AuctionStateChanged.class)
+                .filter(event -> event.auctionId() == fixture.auctionId())
+                .toList();
+        assertThat(events).hasSize(1);
+        assertThat(events.getFirst().state()).isEqualTo(new AuctionLiveState(
+                fixture.auctionId(),
+                1L,
+                com.tikitaka.bidwinback.auction.domain.enums.AuctionType.UP,
+                AuctionStatus.BID_ONGOING,
+                FIRST_BID_PRICE,
+                1L
+        ));
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.tikitaka.bidwinback.auction.application.buynow;
 
+import com.tikitaka.bidwinback.auction.application.live.AuctionLiveState;
+import com.tikitaka.bidwinback.auction.application.live.AuctionStateChanged;
 import com.tikitaka.bidwinback.auction.domain.entity.AuctionTrade;
 import com.tikitaka.bidwinback.auction.domain.entity.DownAuction;
 import com.tikitaka.bidwinback.auction.domain.entity.UpAuction;
@@ -24,6 +26,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -48,6 +52,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
         "app.storage.s3.bucket=test-bucket",
         "app.auction.closing-interval=1d"
 })
+@RecordApplicationEvents
 class BuyNowServiceIntegrationTest {
 
     private static final long BUY_NOW_PRICE = 150_000L;
@@ -55,6 +60,9 @@ class BuyNowServiceIntegrationTest {
 
     @Autowired
     private BuyNowService buyNowService;
+
+    @Autowired
+    private ApplicationEvents applicationEvents;
 
     @Autowired
     private EntityManagerFactory entityManagerFactory;
@@ -126,6 +134,26 @@ class BuyNowServiceIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void 즉시구매가_발행하는_상태_이벤트는_낙찰_직후의_상태와_확정가와_증가한_revision을_담는다() {
+        // 낙찰 UPDATE가 네이티브라 같은 트랜잭션이 적재한 Auction 엔티티는 낡은 값(OPEN, 이전 revision)을 갖는다.
+        // 엔티티로 snapshot을 만들면 이 값이 그대로 SSE로 나가므로, 엔티티를 거치지 않는지 여기서 확인한다.
+        Fixture fixture = createFixture(AuctionStatus.OPEN, 1);
+        Long buyerId = fixture.buyerIds().getFirst();
+
+        buyNowService.buyUpAuction(buyerId, fixture.auctionId(), idempotencyKey("snapshot"));
+
+        List<AuctionStateChanged> events = applicationEvents.stream(AuctionStateChanged.class)
+                .filter(event -> event.auctionId() == fixture.auctionId())
+                .toList();
+        assertThat(events).hasSize(1);
+        AuctionLiveState state = events.getFirst().state();
+        assertThat(state.status()).isEqualTo(AuctionStatus.COMPLETED);
+        assertThat(state.revision()).isEqualTo(1L);
+        assertThat(state.currentPrice()).isEqualTo(BUY_NOW_PRICE);
+        assertThat(state.bidCount()).isEqualTo(1L);
     }
 
     @Test
