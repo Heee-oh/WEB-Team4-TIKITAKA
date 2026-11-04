@@ -3,6 +3,7 @@ package com.tikitaka.bidwinback.auction.domain.repository;
 import com.tikitaka.bidwinback.auction.domain.entity.Auction;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
 import com.tikitaka.bidwinback.auction.domain.repository.dto.AuctionClosingCandidate;
+import com.tikitaka.bidwinback.auction.domain.repository.dto.AuctionLiveStateRow;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -173,6 +175,33 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
             @Param("bidUnit") long bidUnit,
             @Param("expectedStatus") String expectedStatus,
             @Param("revisionIncrement") int revisionIncrement
+    );
+
+    // 실시간 상태(SSE) snapshot의 재료. 엔티티를 거치지 않는 스칼라 조회라, 같은 트랜잭션에서 네이티브
+    // UPDATE로 바꾼 status·revision을 낡은 1차 캐시 없이 읽는다. 쓰기 트랜잭션 안에서 부르면 자기가 쓴 값을,
+    // 별도 읽기 트랜잭션에서 부르면 커밋된 값을 돌려준다.
+    @Query(value = """
+            SELECT auction.id AS auctionId,
+                   auction.auction_type AS auctionType,
+                   auction.status AS status,
+                   auction.revision AS revision,
+                   COALESCE(auction.current_price, auction.start_price) AS currentPrice,
+                   auction.bid_count AS bidCount,
+                   auction.sealed_bid_count AS sealedBidCount,
+                   auction.start_price AS startPrice,
+                   auction.started_at AS startedAt,
+                   auction.ended_at AS endedAt,
+                   down_auction.minimum_price AS minimumPrice,
+                   down_auction.drop_price AS dropPrice,
+                   down_auction.price_drop_interval AS priceDropInterval,
+                   auction_trade.final_price AS finalPrice
+            FROM auction
+            LEFT JOIN down_auction ON down_auction.auction_id = auction.id
+            LEFT JOIN auction_trade ON auction_trade.auction_id = auction.id
+            WHERE auction.id IN (:auctionIds)
+            """, nativeQuery = true)
+    List<AuctionLiveStateRow> findLiveStateRows(
+            @Param("auctionIds") Collection<Long> auctionIds
     );
 
     @Query("""
