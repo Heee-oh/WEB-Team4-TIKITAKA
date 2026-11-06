@@ -49,6 +49,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
@@ -210,7 +212,7 @@ class RedisBidApiIntegrationTest {
         Fixture f = fixture(1);
         Fixture purchase = fixture(0);
         long member = f.members.getFirst();
-        jdbc.update("UPDATE member SET total_point = 320000 WHERE id = ?", member);
+        commit("UPDATE member SET total_point = 320000 WHERE id = ?", member);
         runtime.submitOpen(member, f.auction, 101_000, UUID.randomUUID().toString());
         assertThatThrownBy(() -> whileDraining(() -> context.getBean(BuyNowService.class)
                 .buyUpAuction(member, purchase.auction, UUID.randomUUID().toString())))
@@ -228,7 +230,7 @@ class RedisBidApiIntegrationTest {
         runtime.submitOpen(loser, f.auction, 101_000, UUID.randomUUID().toString());
         runtime.submitOpen(winner, f.auction, 102_000, UUID.randomUUID().toString());
         // 수락 후 시간이 경과한 조건을 DB 마감 시각으로 통제한다. 이미 수락된 이벤트를 재판정하지 않는다.
-        jdbc.update("UPDATE auction SET ended_at = SYSDATE(6) - INTERVAL 1 SECOND WHERE id = ?", f.auction);
+        commit("UPDATE auction SET ended_at = SYSDATE(6) - INTERVAL 1 SECOND WHERE id = ?", f.auction);
         int closed = whileDraining(() -> context.getBean(AuctionClosingService.class).closeBatch(AuctionStatus.BID_ONGOING, 10));
         assertThat(closed).isEqualTo(1);
         assertBalance(loser, 2_000_000, 0);
@@ -244,7 +246,7 @@ class RedisBidApiIntegrationTest {
     @Test
     void 밀봉입찰은_기존_가격비공개_응답을_유지한다() throws Exception {
         Fixture f = fixture(1);
-        jdbc.update("UPDATE auction SET ended_at = SYSDATE(6) + INTERVAL 4 MINUTE WHERE id = ?", f.auction);
+        commit("UPDATE auction SET ended_at = SYSDATE(6) + INTERVAL 4 MINUTE WHERE id = ?", f.auction);
         whileDraining(() -> {
             mvc.perform(post("/api/v1/auctions/up/" + f.auction + "/bids")
                             .with(loggedIn(f.members.getFirst()))
@@ -327,7 +329,7 @@ class RedisBidApiIntegrationTest {
                         .contentType("application/json").content("{\"price\":100000,\"bidType\":\"OPEN\"}"))
                 .andExpect(status().isUnprocessableEntity());
         Fixture late = fixture(0);
-        jdbc.update("UPDATE auction SET ended_at = SYSDATE(6) + INTERVAL 4 MINUTE WHERE id = ?", late.auction);
+        commit("UPDATE auction SET ended_at = SYSDATE(6) + INTERVAL 4 MINUTE WHERE id = ?", late.auction);
         mvc.perform(post("/api/v1/auctions/up/" + late.auction + "/bid-requests").with(loggedIn(member))
                         .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
                         .content("{\"price\":101000,\"bidType\":\"OPEN\"}"))
@@ -362,7 +364,7 @@ class RedisBidApiIntegrationTest {
         Fixture a = fixture(1);
         Fixture b = fixture(0);
         long member = a.members.getFirst();
-        jdbc.update("UPDATE member SET total_point = 30000 WHERE id = ?", member);
+        commit("UPDATE member SET total_point = 30000 WHERE id = ?", member);
         try (var clients = Executors.newFixedThreadPool(2)) {
             var results = clients.invokeAll(List.<Callable<Boolean>>of(
                     () -> acceptOrReject(member, a.auction), () -> acceptOrReject(member, b.auction)));
@@ -558,13 +560,13 @@ class RedisBidApiIntegrationTest {
         long member = f.members.getFirst();
         long previous = jdbc.queryForObject("SELECT last_sequence FROM redis_bid_runtime WHERE id = 1", Long.class);
         runtime.submitOpen(member, f.auction, 101_000, UUID.randomUUID().toString());
-        jdbc.update("UPDATE auction SET revision = 1 WHERE id = ?", f.auction);
+        commit("UPDATE auction SET revision = 1 WHERE id = ?", f.auction);
         assertThatThrownBy(runtime::processHead).isInstanceOf(IllegalStateException.class);
         assertBalance(member, 2_000_000, 0);
         assertThat(number("SELECT COUNT(*) FROM auction_deposit WHERE auction_id = ?", f.auction)).isZero();
         assertThat(jdbc.queryForObject("SELECT last_sequence FROM redis_bid_runtime WHERE id = 1", Long.class)).isEqualTo(previous);
         assertThat(runtime.store.head()).isNotNull();
-        jdbc.update("UPDATE auction SET revision = 0 WHERE id = ?", f.auction);
+        commit("UPDATE auction SET revision = 0 WHERE id = ?", f.auction);
         runtime.processHead();
         assertBalance(member, 1_970_000, 30_000);
         assertThat(number("SELECT COUNT(*) FROM bid WHERE auction_id = ?", f.auction)).isEqualTo(1);
@@ -632,6 +634,12 @@ class RedisBidApiIntegrationTest {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
         while ("0".equals(runtime.store.meta().get("barriers")) && System.nanoTime() < deadline) Thread.sleep(5);
         assertThat(runtime.store.meta().get("barriers")).isNotEqualTo("0");
+    }
+
+    // autocommit이 꺼져 있으므로 테스트 준비용 쓰기도 트랜잭션 안에서 커밋한다.
+    private void commit(String sql, Object... args) {
+        new TransactionTemplate(context.getBean(PlatformTransactionManager.class))
+                .executeWithoutResult(status -> jdbc.update(sql, args));
     }
 
     private Fixture fixture(int count) {
