@@ -126,8 +126,7 @@ public final class RedisBidRuntime implements AutoCloseable {
         try {
             row = jdbc.queryForMap("""
                 SELECT m.total_point, m.locked_point, m.status AS member_status,
-                    COALESCE(a.current_price, (SELECT MAX(b.price) FROM bid b WHERE b.auction_id = a.id), a.start_price)
-                        AS current_price,
+                    a.current_price,
                     a.revision, a.seller_id, a.status, a.ended_at, a.start_price, a.completed_at,
                     u.auction_id AS up_id, d.status AS deposit_status, d.reserved_amount
                 FROM auction a LEFT JOIN up_auction u ON u.auction_id = a.id

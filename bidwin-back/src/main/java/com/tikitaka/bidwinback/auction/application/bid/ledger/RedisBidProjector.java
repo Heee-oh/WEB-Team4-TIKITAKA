@@ -120,8 +120,7 @@ final class RedisBidProjector {
                 UPDATE auction SET current_price = ?, current_bidder_id = ?, bid_count = bid_count + 1,
                     revision = revision + 1, status = 'BID_ONGOING', last_modified_at = SYSDATE(6)
                 WHERE id = ? AND revision = ? AND status IN ('OPEN', 'BID_ONGOING') AND completed_at IS NULL
-                    AND COALESCE(current_price, (SELECT MAX(b.price) FROM bid b WHERE b.auction_id = auction.id),
-                        start_price) <= ? - 1000
+                    AND current_price <= ? - 1000
                 """, price, member, auction, version - 1, price);
         if (changed != 1) throw new IllegalStateException("수락한 입찰의 경매 버전 불일치");
         LocalDateTime acceptedAt = LocalDateTime.ofInstant(

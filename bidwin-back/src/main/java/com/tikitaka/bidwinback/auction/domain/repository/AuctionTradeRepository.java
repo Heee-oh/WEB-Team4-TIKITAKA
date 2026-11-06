@@ -44,16 +44,16 @@ public interface AuctionTradeRepository extends JpaRepository<AuctionTrade, Long
                 SELECT auction.id AS auction_id,
                        CASE WHEN auction.current_bidder_id IS NOT NULL
                                  AND (auction.sealed_top_bidder_id IS NULL
-                                      OR COALESCE(auction.current_price, auction.start_price)
+                                      OR auction.current_price
                                          >= auction.sealed_top_price)
                             THEN auction.current_bidder_id
                             ELSE auction.sealed_top_bidder_id
                        END AS buyer_id,
                        CASE WHEN auction.current_bidder_id IS NOT NULL
                                  AND (auction.sealed_top_bidder_id IS NULL
-                                      OR COALESCE(auction.current_price, auction.start_price)
+                                      OR auction.current_price
                                          >= auction.sealed_top_price)
-                            THEN COALESCE(auction.current_price, auction.start_price)
+                            THEN auction.current_price
                             ELSE auction.sealed_top_price
                        END AS final_price
                 FROM auction

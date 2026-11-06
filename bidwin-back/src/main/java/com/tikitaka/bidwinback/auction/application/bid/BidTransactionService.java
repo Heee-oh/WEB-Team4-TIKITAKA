@@ -287,18 +287,8 @@ public class BidTransactionService {
                 : BidType.SEALED;
     }
 
-    private long currentPriceOf(Auction auction) {
-        if (auction.hasCurrentPrice()) {
-            return auction.getCurrentPrice();
-        }
-
-        // 스키마 변경 전에 생성된 경매만 Bid 최고가로 현재가를 보정한다.
-        Long highestPrice = bidRepository.findHighestPriceByAuctionId(auction.getId());
-        return highestPrice == null ? auction.getStartPrice() : highestPrice;
-    }
-
     private long highestAcceptedPriceOf(Auction auction, BidType bidType) {
-        long currentPrice = currentPriceOf(auction);
+        long currentPrice = auction.getCurrentPrice();
         if (bidType != BidType.SEALED) {
             return currentPrice;
         }

@@ -586,57 +586,6 @@ class BidServiceIntegrationTest {
     }
 
     @Test
-    void 기존_현재가가_null이면_입찰_이력의_최고가를_기준으로_갱신한다() {
-        Fixture fixture = createFixture(1);
-        long legacyHighestPrice = 105_000L;
-        executeInTransaction(entityManager -> {
-            UpAuction auction = entityManager.find(UpAuction.class, fixture.auctionId());
-            Member bidder = entityManager.getReference(
-                    Member.class,
-                    fixture.bidderIds().getFirst()
-            );
-            entityManager.persist(Bid.builder()
-                    .auction(auction)
-                    .bidder(bidder)
-                    .price(legacyHighestPrice)
-                    .status(BidStatus.UP)
-                    .build());
-            entityManager.flush();
-            entityManager.createNativeQuery("""
-                            UPDATE auction
-                            SET current_price = NULL,
-                                status = 'BID_ONGOING'
-                            WHERE id = :auctionId
-                            """)
-                    .setParameter("auctionId", fixture.auctionId())
-                    .executeUpdate();
-            return null;
-        });
-
-        Throwable rejected = catchThrowable(() -> bidService.place(
-                fixture.bidderIds().getFirst(),
-                fixture.auctionId(),
-                legacyHighestPrice,
-                BidType.OPEN
-        ));
-        BidResult accepted = bidService.place(
-                fixture.bidderIds().getFirst(),
-                fixture.auctionId(),
-                legacyHighestPrice + 1_000L,
-                BidType.OPEN
-        );
-
-        assertThat(rejected).isInstanceOfSatisfying(
-                BusinessException.class,
-                exception -> assertThat(exception.getErrorCode())
-                        .isEqualTo(ErrorCode.BID_PRICE_TOO_LOW)
-        );
-        assertThat(accepted.price()).isEqualTo(legacyHighestPrice + 1_000L);
-        assertThat(findAuctionSnapshot(fixture.auctionId()).currentPrice())
-                .isEqualTo(legacyHighestPrice + 1_000L);
-    }
-
-    @Test
     void 현재가가_bigint_상한에_가까워도_오버플로_없이_입찰을_거절한다() {
         // given
         Fixture fixture = createFixture(1);

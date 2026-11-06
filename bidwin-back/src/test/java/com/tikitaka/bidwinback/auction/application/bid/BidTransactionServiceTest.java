@@ -369,7 +369,6 @@ class BidTransactionServiceTest {
         when(auction.getStatus()).thenReturn(AuctionStatus.BID_ONGOING);
         when(auction.getEndedAt()).thenReturn(DATABASE_TIME.plusMinutes(2));
         when(auctionRepository.currentDatabaseTime()).thenReturn(DATABASE_TIME);
-        when(auction.hasCurrentPrice()).thenReturn(true);
         when(auction.getCurrentPrice()).thenReturn(CURRENT_PRICE);
         when(auction.getId()).thenReturn(AUCTION_ID);
         when(sealedBidRepository.findHighestPriceByAuctionId(AUCTION_ID))
@@ -390,7 +389,6 @@ class BidTransactionServiceTest {
         stubFailedUpdate(auction);
         when(auction.getStatus()).thenReturn(AuctionStatus.BID_ONGOING);
         when(auction.getEndedAt()).thenReturn(DATABASE_TIME.plusDays(1));
-        when(auction.hasCurrentPrice()).thenReturn(true);
         when(auction.getCurrentPrice()).thenReturn(PRICE);
         when(auctionRepository.currentDatabaseTime()).thenReturn(DATABASE_TIME);
         stubSeller(2L);
@@ -495,7 +493,6 @@ class BidTransactionServiceTest {
         stubFailedUpdate(auction);
         when(auction.getStatus()).thenReturn(AuctionStatus.BID_ONGOING);
         when(auction.getEndedAt()).thenReturn(DATABASE_TIME.plusDays(1));
-        when(auction.hasCurrentPrice()).thenReturn(true);
         when(auction.getCurrentPrice()).thenReturn(CURRENT_PRICE);
         when(auctionRepository.currentDatabaseTime()).thenReturn(DATABASE_TIME);
         stubSeller(2L);

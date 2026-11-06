@@ -8,7 +8,6 @@ import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionType;
 import com.tikitaka.bidwinback.auction.domain.repository.AuctionRepository;
 import com.tikitaka.bidwinback.auction.domain.repository.AuctionTradeRepository;
-import com.tikitaka.bidwinback.auction.domain.repository.BidRepository;
 import com.tikitaka.bidwinback.auction.domain.repository.ImageRepository;
 import com.tikitaka.bidwinback.global.common.PageResponse;
 import com.tikitaka.bidwinback.global.storage.ImageUrlResolver;
@@ -36,7 +35,6 @@ public class MySaleRecordService {
 
     private final AuctionRepository auctionRepository;
     private final AuctionTradeRepository auctionTradeRepository;
-    private final BidRepository bidRepository;
     private final ImageRepository imageRepository;
     private final ImageUrlResolver imageUrlResolver;
     private final BuyNowPriceCalculator buyNowPriceCalculator;
@@ -99,11 +97,7 @@ public class MySaleRecordService {
 
     private long resolveLivePrice(Auction auction, LocalDateTime asOf) {
         if (auction instanceof UpAuction upAuction) {
-            if (upAuction.hasCurrentPrice()) {
-                return upAuction.getCurrentPrice();
-            }
-            Long highestPrice = bidRepository.findHighestPriceByAuctionId(auction.getId());
-            return highestPrice != null ? highestPrice : upAuction.getStartPrice();
+            return upAuction.getCurrentPrice();
         }
         if (auction instanceof DownAuction downAuction) {
             return buyNowPriceCalculator.calculate(downAuction, asOf);
