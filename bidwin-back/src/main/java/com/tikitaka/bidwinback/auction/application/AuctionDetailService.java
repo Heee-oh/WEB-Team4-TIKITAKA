@@ -87,7 +87,7 @@ public class AuctionDetailService {
             AuctionSellerResponse seller,
             Optional<Long> finalPrice
     ) {
-        long currentPrice = finalPrice.orElseGet(() -> currentPriceOf(auction));
+        long currentPrice = finalPrice.orElseGet(() -> auction.getCurrentPrice());
         long bidCount = bidRepository.countByAuctionId(auction.getId());
         LocalDateTime databaseTime = auctionRepository.currentDatabaseTime();
         if (auction.isSealedBidRevealed()) {
@@ -116,16 +116,6 @@ public class AuctionDetailService {
                 currentPrice,
                 bidCount
         );
-    }
-
-    private long currentPriceOf(UpAuction auction) {
-        if (auction.hasCurrentPrice()) {
-            return auction.getCurrentPrice();
-        }
-
-        // 스키마 변경 전에 생성된 경매만 Bid 최고가로 현재가를 보정한다.
-        Long highestPrice = bidRepository.findHighestPriceByAuctionId(auction.getId());
-        return highestPrice == null ? auction.getStartPrice() : highestPrice;
     }
 
     private DownAuctionDetailResponse toDownAuctionResponse(

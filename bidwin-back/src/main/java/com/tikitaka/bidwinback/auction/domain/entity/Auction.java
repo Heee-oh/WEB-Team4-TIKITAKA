@@ -73,9 +73,8 @@ public abstract class Auction extends BaseTimeEntity {
     @Column(name = "start_price", nullable = false)
     private long startPrice;
 
-    // 스키마 변경 전 데이터는 null일 수 있어 도메인 조회에서는 시작가로 방어한다.
-    @Column(name = "current_price")
-    private Long currentPrice;
+    @Column(name = "current_price", nullable = false)
+    private long currentPrice;
 
     @Column(name = "current_bidder_id")
     private Long currentBidderId;
@@ -147,11 +146,7 @@ public abstract class Auction extends BaseTimeEntity {
     }
 
     public long getCurrentPrice() {
-        return currentPrice == null ? startPrice : currentPrice;
-    }
-
-    public boolean hasCurrentPrice() {
-        return currentPrice != null;
+        return currentPrice;
     }
 
     public boolean isSealedBidRevealed() {

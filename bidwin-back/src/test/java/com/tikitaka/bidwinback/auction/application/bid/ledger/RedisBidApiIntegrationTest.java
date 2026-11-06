@@ -545,16 +545,6 @@ class RedisBidApiIntegrationTest {
     }
 
     @Test
-    void 이전_데이터의_NULL현재가도_기존_호가기준으로_처리한다() {
-        Fixture f = fixture(1);
-        jdbc.update("UPDATE auction SET current_price = NULL WHERE id = ?", f.auction);
-        runtime.submitOpen(f.members.getFirst(), f.auction, 101_000, UUID.randomUUID().toString());
-        runtime.processHead();
-        assertThat(number("SELECT current_price FROM auction WHERE id = ?", f.auction)).isEqualTo(101_000);
-        assertBalance(f.members.getFirst(), 1_970_000, 30_000);
-    }
-
-    @Test
     void 마감대상이_없고_미반영로그도_없으면_장벽과_명령을_만들지_않는다() {
         String sequence = runtime.store.meta().get("seq").toString();
         assertThat(context.getBean(AuctionClosingService.class).closeBatch(AuctionStatus.BID_ONGOING, 10)).isZero();

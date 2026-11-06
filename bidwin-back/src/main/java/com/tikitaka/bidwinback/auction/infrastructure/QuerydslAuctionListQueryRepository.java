@@ -780,7 +780,7 @@ public class QuerydslAuctionListQueryRepository implements AuctionListQueryRepos
                 .when(auction.status.eq(AuctionStatus.COMPLETED))
                 .then(auction.currentPrice)
                 .when(auction.instanceOf(UpAuction.class))
-                .then(auction.currentPrice.coalesce(auction.startPrice))
+                .then(auction.currentPrice)
                 .otherwise(downCurrentPrice);
 
         return queryFactory

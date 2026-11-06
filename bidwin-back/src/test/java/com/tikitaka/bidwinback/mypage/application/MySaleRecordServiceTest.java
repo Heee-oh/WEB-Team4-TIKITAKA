@@ -7,7 +7,6 @@ import com.tikitaka.bidwinback.auction.domain.entity.UpAuction;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
 import com.tikitaka.bidwinback.auction.domain.repository.AuctionRepository;
 import com.tikitaka.bidwinback.auction.domain.repository.AuctionTradeRepository;
-import com.tikitaka.bidwinback.auction.domain.repository.BidRepository;
 import com.tikitaka.bidwinback.auction.domain.repository.ImageRepository;
 import com.tikitaka.bidwinback.global.common.PageResponse;
 import com.tikitaka.bidwinback.global.storage.ImageUrlResolver;
@@ -44,8 +43,6 @@ class MySaleRecordServiceTest {
     @Mock
     private AuctionTradeRepository auctionTradeRepository;
     @Mock
-    private BidRepository bidRepository;
-    @Mock
     private ImageRepository imageRepository;
     @Mock
     private ImageUrlResolver imageUrlResolver;
@@ -59,7 +56,6 @@ class MySaleRecordServiceTest {
         service = new MySaleRecordService(
                 auctionRepository,
                 auctionTradeRepository,
-                bidRepository,
                 imageRepository,
                 imageUrlResolver,
                 buyNowPriceCalculator
@@ -72,7 +68,6 @@ class MySaleRecordServiceTest {
     void 진행중인_상향_경매는_현재가를_그대로_보여준다() {
         UpAuction auction = mock(UpAuction.class);
         stubCommon(auction, 1L, AuctionStatus.BID_ONGOING);
-        when(auction.hasCurrentPrice()).thenReturn(true);
         when(auction.getCurrentPrice()).thenReturn(150_000L);
         stubPage(List.of(auction));
 

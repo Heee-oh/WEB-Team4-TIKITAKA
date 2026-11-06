@@ -96,7 +96,6 @@ class AuctionDetailServiceTest {
         when(imageRepository.findByAuctionIdOrderByIdAsc(1L)).thenReturn(List.of(image));
         when(imageUrlResolver.resolve("auction-images/product.jpg"))
                 .thenReturn("https://cdn.example.com/auction-images/product.jpg");
-        when(auction.hasCurrentPrice()).thenReturn(true);
         when(auction.getCurrentPrice()).thenReturn(240_000L);
         when(bidRepository.countByAuctionId(1L)).thenReturn(3L);
 
@@ -130,7 +129,6 @@ class AuctionDetailServiceTest {
         // 즉시구매가 더 이상 불가능해진 경매를 재현한다.
         when(auctionRepository.findDetailById(1L)).thenReturn(Optional.of(auction));
         when(imageRepository.findByAuctionIdOrderByIdAsc(1L)).thenReturn(List.of());
-        when(auction.hasCurrentPrice()).thenReturn(true);
         when(auction.getCurrentPrice()).thenReturn(240_000L);
         when(bidRepository.countByAuctionId(1L)).thenReturn(3L);
 
@@ -151,7 +149,7 @@ class AuctionDetailServiceTest {
         );
         when(auctionRepository.findDetailById(1L)).thenReturn(Optional.of(auction));
         when(imageRepository.findByAuctionIdOrderByIdAsc(1L)).thenReturn(List.of());
-        when(bidRepository.findHighestPriceByAuctionId(1L)).thenReturn(null);
+        when(auction.getCurrentPrice()).thenReturn(200_000L);
         when(bidRepository.countByAuctionId(1L)).thenReturn(0L);
 
         UpAuctionDetailResponse response = (UpAuctionDetailResponse)
