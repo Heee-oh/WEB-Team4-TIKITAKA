@@ -17,11 +17,8 @@ public record AuctionListResponse(
         @Schema(description = "현재 페이지. 1부터 시작", example = "1")
         int page,
 
-        @Schema(description = "전체 페이지 수", example = "3")
-        int totalPages,
-
-        @Schema(description = "전체 항목 수", example = "42")
-        long totalCount,
+        @Schema(description = "다음 페이지 존재 가능 여부. 스냅샷 없는 조회는 마지막 페이지가 정확히 16건이면 다음 페이지가 비어 있을 수 있음", example = "true")
+        boolean hasNext,
 
         @Schema(description = "요청 세대 만료로 최신 1페이지로 초기화했는지 여부")
         boolean snapshotReset,
@@ -35,9 +32,8 @@ public record AuctionListResponse(
             long serverTime,
             long asOf,
             int page,
-            int totalPages,
-            long totalCount
+            boolean hasNext
     ) {
-        this(items, serverTime, asOf, page, totalPages, totalCount, false, null);
+        this(items, serverTime, asOf, page, hasNext, false, null);
     }
 }

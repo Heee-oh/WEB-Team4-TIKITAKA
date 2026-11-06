@@ -40,8 +40,7 @@ export interface AuctionListResponse {
   serverTime: number
   asOf: number
   page: number
-  totalPages: number
-  totalCount: number
+  hasNext: boolean
   snapshotReset: boolean
   snapshotResetReason: 'GENERATION_EXPIRED' | null
 }

@@ -157,6 +157,6 @@ class AuctionListServiceTest {
     }
 
     private AuctionListResponse response() {
-        return new AuctionListResponse(List.of(), 1L, 1L, 1, 1, 0L);
+        return new AuctionListResponse(List.of(), 1L, 1L, 1, false);
     }
 }

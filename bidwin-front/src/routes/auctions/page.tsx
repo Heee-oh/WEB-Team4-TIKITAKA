@@ -17,6 +17,7 @@ import {
   CATEGORY_QUERY_PARAM,
   FIRST_PAGE,
   LIST_TEXT,
+  MAX_PAGES,
   PAGE_SIZE,
   SEARCH_QUERY_PARAM,
 } from './constants'
@@ -352,10 +353,10 @@ function AuctionListPage() {
             <div className="shrink-0 border-t border-hairline-soft pt-base">
               <Pagination
                 currentPage={response.page}
-                totalPages={response.totalPages}
+                totalPages={MAX_PAGES}
                 onChange={changePage}
                 maxVisiblePage={maxVisitedPage}
-                canGoNext={response.page < (lastPage ?? response.totalPages)}
+                canGoNext={response.hasNext && (lastPage === null || response.page < lastPage)}
               />
             </div>
           )}
