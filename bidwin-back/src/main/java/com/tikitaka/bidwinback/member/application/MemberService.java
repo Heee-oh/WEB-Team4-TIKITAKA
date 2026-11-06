@@ -134,7 +134,6 @@ public class MemberService {
         return memberRepository.findByEmail(email);
     }
 
-    @Transactional(readOnly = true)
     public boolean isActiveWithAuthVersion(Long memberId, long authVersion) {
         return memberRepository.existsByIdAndStatusAndAuthVersion(
                 memberId,
