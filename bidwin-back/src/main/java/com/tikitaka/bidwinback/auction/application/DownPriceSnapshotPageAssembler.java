@@ -35,8 +35,7 @@ public class DownPriceSnapshotPageAssembler {
                     responseMapper.toEpochMilli(resolved.serverTime()),
                     responseMapper.toEpochMilli(page.generationAt()),
                     resolved.effectivePage(),
-                    totalPages,
-                    page.totalCount(),
+                    resolved.effectivePage() < totalPages,
                     resolved.reset(),
                     resolved.resetReason()
             );

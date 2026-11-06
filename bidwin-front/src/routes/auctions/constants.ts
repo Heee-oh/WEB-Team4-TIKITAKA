@@ -8,6 +8,8 @@ export const PAGE_SIZE = 16
 /** 페이지네이션에 한 번에 노출할 번호 버튼 개수 (넘치면 앞뒤를 … 로 접는다) */
 export const PAGE_WINDOW_SIZE = 5
 export const FIRST_PAGE = 1
+/** 서버의 목록 조회 상한(AuctionListPagePolicy.MAX_PAGES)과 같은 값 */
+export const MAX_PAGES = 100
 /** 카드 하단에 노출할 해시태그 최대 개수 */
 export const CARD_HASHTAG_LIMIT = 3
 /*

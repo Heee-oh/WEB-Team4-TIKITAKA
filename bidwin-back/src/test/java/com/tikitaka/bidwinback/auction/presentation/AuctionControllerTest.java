@@ -191,7 +191,7 @@ class AuctionControllerTest {
         // given
         when(auctionListService.getList(any(AuctionListQuery.class)))
                 .thenReturn(CompletableFuture.completedFuture(
-                        new AuctionListResponse(List.of(), 0L, 0L, 1, 1, 0L)
+                        new AuctionListResponse(List.of(), 0L, 0L, 1, false)
                 ));
 
         // when

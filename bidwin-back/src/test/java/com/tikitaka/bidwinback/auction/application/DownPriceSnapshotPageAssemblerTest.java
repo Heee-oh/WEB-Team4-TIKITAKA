@@ -62,11 +62,36 @@ class DownPriceSnapshotPageAssemblerTest {
         assertThat(response.serverTime()).isEqualTo(2L);
         assertThat(response.asOf()).isEqualTo(1L);
         assertThat(response.page()).isEqualTo(1);
-        assertThat(response.totalPages()).isEqualTo(2);
-        assertThat(response.totalCount()).isEqualTo(17L);
+        assertThat(response.hasNext()).isTrue();
         assertThat(response.snapshotReset()).isTrue();
         assertThat(response.snapshotResetReason())
                 .isEqualTo(SnapshotResetReason.GENERATION_EXPIRED);
         verify(auctionListQueryRepository).findDownRowsByPriceSnapshots(entries);
+    }
+
+    @Test
+    void 스냅샷_건수가_현재_페이지에서_끝나면_다음_페이지가_없다() {
+        LocalDateTime generationAt = LocalDateTime.of(2026, 8, 18, 12, 0);
+        LocalDateTime serverTime = generationAt.plusSeconds(10);
+        List<AuctionPriceSnapshot> entries = List.of(
+                new AuctionPriceSnapshot(1L, 100L, 90L)
+        );
+        ResolvedDownPriceSnapshotPage resolved = new ResolvedDownPriceSnapshotPage(
+                new DownPriceSnapshotPage(generationAt, entries, 16),
+                serverTime,
+                1,
+                null
+        );
+        when(auctionListQueryRepository.findDownRowsByPriceSnapshots(entries))
+                .thenReturn(List.of(row));
+        when(responseMapper.toSummary(row)).thenReturn(summary);
+
+        AuctionListResponse response = new DownPriceSnapshotPageAssembler(
+                auctionListQueryRepository,
+                responseMapper,
+                new DownPriceSnapshotMetrics(new SimpleMeterRegistry())
+        ).assemble(resolved);
+
+        assertThat(response.hasNext()).isFalse();
     }
 }

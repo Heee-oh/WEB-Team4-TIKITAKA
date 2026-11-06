@@ -42,22 +42,23 @@ public class AuctionListDbQuery {
         );
         int currentPage = normalizedPage(query.page());
         long offset = (long) (currentPage - FIRST_PAGE) * size;
-        long totalCount = (long) AuctionListPagePolicy.MAX_PAGES * size;
+        long candidateCountLimit = (long) AuctionListPagePolicy.MAX_PAGES * size;
 
         List<AuctionListRow> rows = findPage(
                 condition,
                 currentPage,
                 size,
-                totalCount,
+                candidateCountLimit,
                 offset
         );
+        // COUNT 없이 판단하므로 마지막 페이지가 정확히 16건이면 다음 페이지가 비어 있을 수 있다.
+        boolean hasNext = rows.size() == size && currentPage < AuctionListPagePolicy.MAX_PAGES;
         return new AuctionListResponse(
                 rows.stream().map(responseMapper::toSummary).toList(),
                 responseMapper.toEpochMilli(serverTime),
                 responseMapper.toEpochMilli(asOf),
                 currentPage,
-                AuctionListPagePolicy.MAX_PAGES,
-                totalCount
+                hasNext
         );
     }
 

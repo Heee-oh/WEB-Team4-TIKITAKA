@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -176,7 +177,7 @@ class AuctionListDbQueryTest {
     }
 
     @Test
-    void 목록_조회_상한은_100페이지와_페이지_크기의_곱으로_계산한다() {
+    void 페이지_크기보다_적게_조회되면_다음_페이지가_없다() {
         when(auctionListQueryRepository.findPage(any(), eq(0L), eq(16)))
                 .thenReturn(List.of(upRow(1L, null, 100_000L, 0L), upRow(2L, null, 200_000L, 1L)));
 
@@ -185,10 +186,34 @@ class AuctionListDbQueryTest {
         );
 
         assertThat(response.items()).hasSize(2);
-        assertThat(response.totalCount()).isEqualTo(1_600L);
-        assertThat(response.totalPages()).isEqualTo(100);
+        assertThat(response.hasNext()).isFalse();
         assertThat(response.page()).isEqualTo(1);
         verify(auctionListQueryRepository, never()).count(any());
+    }
+
+    @Test
+    void 페이지_크기만큼_조회되면_다음_페이지가_있다() {
+        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(16)))
+                .thenReturn(fullPageRows());
+
+        AuctionListResponse response = auctionListDbQuery.findPage(
+                query(null, AuctionSort.LATEST, null, 1)
+        );
+
+        assertThat(response.hasNext()).isTrue();
+    }
+
+    @Test
+    void 상한_페이지는_가득_차도_다음_페이지가_없다() {
+        when(auctionListQueryRepository.findPage(any(), eq(1_584L), eq(16)))
+                .thenReturn(fullPageRows());
+
+        AuctionListResponse response = auctionListDbQuery.findPage(
+                query(null, AuctionSort.LATEST, null, 100)
+        );
+
+        assertThat(response.items()).hasSize(16);
+        assertThat(response.hasNext()).isFalse();
     }
 
     @Test
@@ -236,10 +261,8 @@ class AuctionListDbQueryTest {
 
         assertThat(page100.page()).isEqualTo(100);
         assertThat(page101.page()).isEqualTo(100);
-        assertThat(page100.totalPages()).isEqualTo(100);
-        assertThat(page101.totalPages()).isEqualTo(100);
-        assertThat(page100.totalCount()).isEqualTo(1_600L);
-        assertThat(page101.totalCount()).isEqualTo(1_600L);
+        assertThat(page100.hasNext()).isFalse();
+        assertThat(page101.hasNext()).isFalse();
         verify(auctionListQueryRepository, times(2))
                 .findPage(any(), eq(1_584L), eq(16));
     }
@@ -251,8 +274,7 @@ class AuctionListDbQueryTest {
         );
 
         assertThat(response.items()).isEmpty();
-        assertThat(response.totalCount()).isEqualTo(1_600L);
-        assertThat(response.totalPages()).isEqualTo(100);
+        assertThat(response.hasNext()).isFalse();
         verify(auctionListQueryRepository).findPage(any(), eq(0L), eq(16));
         verify(auctionListQueryRepository, never()).count(any());
     }
@@ -269,6 +291,12 @@ class AuctionListDbQueryTest {
             LocalDateTime asOf
     ) {
         return new AuctionListQuery(type, sort, keyword, null, null, page, asOf);
+    }
+
+    private List<AuctionListRow> fullPageRows() {
+        return LongStream.rangeClosed(1L, 16L)
+                .mapToObj(id -> upRow(id, null, 100_000L, 0L))
+                .toList();
     }
 
     private AuctionListRow upRow(long id, String thumbnailObjectKey, long currentPrice, long bidCount) {
