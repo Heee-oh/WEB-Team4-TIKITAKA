@@ -36,12 +36,20 @@ spring:
     hikari:
       # t3.micro(vCPU 2) 기준 HikariCP 권장 공식: (core_count * 2) + effective_spindle_count
       maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:5}
+      # 트랜잭션마다 SET autocommit을 왕복하지 않도록 커넥션을 autocommit=false로 관리한다.
+      # 트랜잭션 없이 JdbcTemplate으로 쓰면 커밋되지 않으니, 쓰기는 항상 트랜잭션 안에서 실행해야 한다.
+      auto-commit: false
   flyway:
     baseline-on-migrate: true
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        connection:
+          # Hikari가 autocommit을 꺼 두었으니 Hibernate가 상태를 확인하지 않게 한다.
+          provider_disables_autocommit: true
   data:
     redis:
       host: ${REDIS_HOST:localhost}
