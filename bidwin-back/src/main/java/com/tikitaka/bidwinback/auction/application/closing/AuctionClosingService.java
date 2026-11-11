@@ -103,7 +103,9 @@ public class AuctionClosingService {
         );
         for (int i = 0; i < candidates.size(); i++) {
             AuctionClosingCandidate candidate = candidates.get(i);
+            // 상태 변경 이벤트: 마감된 모든 경매에 발행한다.
             eventPublisher.publishEvent(new AuctionStateChanged(states.get(i)));
+            // 입찰 내역 공개 이벤트: BID_ONGOING이었던 경매만 발행한다.
             // 공개입찰조차 없던 경매(OPEN)는 공개할 밀봉 입찰 내역이 없다.
             if (candidateStatus == AuctionStatus.BID_ONGOING) {
                 eventPublisher.publishEvent(new AuctionBidHistoryRevealed(
