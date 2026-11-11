@@ -154,10 +154,10 @@ class AuctionPricePageQueryTest {
         // when
         auctionPricePageQuery.findPage(condition, 1, 2, 1_002);
 
-        // then
+        // then: 페이지 2건과 다음 페이지 확인용 1건(1_000)까지 top-k가 3건이다.
         assertThat(capturedSnapshots())
                 .extracting(AuctionPriceSnapshot::auctionId)
-                .containsExactly(1_001L, 1_002L);
+                .containsExactly(1_001L, 1_002L, 1_000L);
     }
 
     @Test
@@ -176,15 +176,18 @@ class AuctionPricePageQueryTest {
         when(auctionListQueryRepository.findRemainingDownPriceCandidatesAtBound(
                 eq(condition),
                 eq(cursor)
-        )).thenReturn(List.of(downCandidate(1_000L, 1_000L, 1_000L)));
+        )).thenReturn(List.of(
+                downCandidate(1_000L, 1_000L, 1_000L),
+                downCandidate(999L, 1_000L, 1_000L)
+        ));
 
-        // when
+        // when: top-k는 페이지 1건과 다음 페이지 확인용 1건이라 2건이다. 경계 동률 그룹이 이를 채운다.
         auctionPricePageQuery.findPage(condition, 1, 1, 1_001);
 
         // then
         assertThat(capturedSnapshots())
                 .extracting(AuctionPriceSnapshot::auctionId)
-                .containsExactly(1_000L);
+                .containsExactly(1_000L, 999L);
         verify(auctionListQueryRepository, times(1)).findDownPriceCandidates(
                 eq(condition),
                 nullable(AuctionPriceCursor.class),
@@ -213,10 +216,10 @@ class AuctionPricePageQueryTest {
         // when
         auctionPricePageQuery.findPage(condition, 1, 1, 1_001);
 
-        // then
+        // then: 페이지 1건과 다음 페이지 확인용 1건이다.
         assertThat(capturedSnapshots())
                 .extracting(AuctionPriceSnapshot::auctionId)
-                .containsExactly(2_000L);
+                .containsExactly(2_000L, 1_999L);
         verify(auctionListQueryRepository, times(1)).findDownPriceCandidates(
                 eq(condition),
                 nullable(AuctionPriceCursor.class),
@@ -242,10 +245,10 @@ class AuctionPricePageQueryTest {
         // when
         auctionPricePageQuery.findPage(condition, 1, 2, 3);
 
-        // then
+        // then: 페이지 2건과 다음 페이지 확인용 1건이다.
         assertThat(capturedSnapshots())
                 .extracting(AuctionPriceSnapshot::auctionId)
-                .containsExactly(2L, 3L);
+                .containsExactly(2L, 3L, 1L);
     }
 
     @Test
@@ -292,7 +295,7 @@ class AuctionPricePageQueryTest {
     void 상향_높은가격순은_current_price_스냅샷을_추가계산없이_사용한다() {
         // given
         AuctionListSearchCondition condition = upCondition(AuctionSort.PRICE_HIGH);
-        when(auctionListQueryRepository.findUpPriceSnapshots(condition, 2))
+        when(auctionListQueryRepository.findUpPriceSnapshots(condition, 3))
                 .thenReturn(List.of(
                         new AuctionPriceSnapshot(2L, 800L, 800L),
                         new AuctionPriceSnapshot(3L, 700L, 700L)
@@ -332,10 +335,51 @@ class AuctionPricePageQueryTest {
     }
 
     @Test
+    void 다음_페이지가_있으면_페이지_크기보다_한_건_더_반환한다() {
+        // given
+        AuctionListSearchCondition condition = upCondition(AuctionSort.PRICE_LOW);
+        when(auctionListQueryRepository.findUpPriceSnapshots(condition, 3))
+                .thenReturn(List.of(
+                        new AuctionPriceSnapshot(1L, 100L, 100L),
+                        new AuctionPriceSnapshot(2L, 200L, 200L),
+                        new AuctionPriceSnapshot(3L, 300L, 300L)
+                ));
+
+        // when
+        auctionPricePageQuery.findPage(condition, 1, 2, 1_000);
+
+        // then
+        assertThat(capturedSnapshots())
+                .extracting(AuctionPriceSnapshot::auctionId)
+                .containsExactly(1L, 2L, 3L);
+    }
+
+    @Test
+    void 후보_상한까지만_읽으면_페이지_크기를_넘기지_않는다() {
+        // given: 2페이지(size 2)의 후보 상한이 4건이라 다음 페이지 확인용 한 건을 읽을 수 없다.
+        AuctionListSearchCondition condition = upCondition(AuctionSort.PRICE_LOW);
+        when(auctionListQueryRepository.findUpPriceSnapshots(condition, 4))
+                .thenReturn(List.of(
+                        new AuctionPriceSnapshot(1L, 100L, 100L),
+                        new AuctionPriceSnapshot(2L, 200L, 200L),
+                        new AuctionPriceSnapshot(3L, 300L, 300L),
+                        new AuctionPriceSnapshot(4L, 400L, 400L)
+                ));
+
+        // when
+        auctionPricePageQuery.findPage(condition, 2, 2, 4);
+
+        // then
+        assertThat(capturedSnapshots())
+                .extracting(AuctionPriceSnapshot::auctionId)
+                .containsExactly(3L, 4L);
+    }
+
+    @Test
     void 상향_current_price와_하향_top_k를_합쳐_전체_가격순을_만든다() {
         // given
         AuctionListSearchCondition condition = condition(null, AuctionSort.PRICE_HIGH);
-        when(auctionListQueryRepository.findUpPriceSnapshots(condition, 2))
+        when(auctionListQueryRepository.findUpPriceSnapshots(condition, 3))
                 .thenReturn(List.of(
                         new AuctionPriceSnapshot(1L, 500L, 500L),
                         new AuctionPriceSnapshot(2L, 300L, 300L)
@@ -352,10 +396,10 @@ class AuctionPricePageQueryTest {
         // when
         auctionPricePageQuery.findPage(condition, 1, 2, 4);
 
-        // then
+        // then: 페이지 2건과 다음 페이지 확인용 1건이다.
         assertThat(capturedSnapshots())
                 .extracting(AuctionPriceSnapshot::auctionId)
-                .containsExactly(1L, 3L);
+                .containsExactly(1L, 3L, 2L);
     }
 
     @Test
@@ -374,7 +418,8 @@ class AuctionPricePageQueryTest {
                 );
             }
 
-            verify(auctionListQueryRepository).findUpPriceSnapshots(condition, size);
+            // 첫 페이지는 다음 페이지 확인용 한 건을 더 읽고, 마지막 페이지는 후보 상한까지만 읽는다.
+            verify(auctionListQueryRepository).findUpPriceSnapshots(condition, size + 1);
             verify(auctionListQueryRepository)
                     .findUpPriceSnapshots(condition, (int) candidateCountLimit);
         }
@@ -409,7 +454,7 @@ class AuctionPricePageQueryTest {
                         eq(1_000)
                 );
                 if (type == null) {
-                    verify(auctionListQueryRepository).findUpPriceSnapshots(condition, size);
+                    verify(auctionListQueryRepository).findUpPriceSnapshots(condition, size + 1);
                     verify(auctionListQueryRepository)
                             .findUpPriceSnapshots(condition, (int) candidateCountLimit);
                 } else {
@@ -436,11 +481,11 @@ class AuctionPricePageQueryTest {
         // when
         auctionPricePageQuery.findPage(condition, 2, 16, 40);
 
-        // then
+        // then: 2페이지 16건(17~32)과 다음 페이지 확인용 1건(33)이다.
         assertThat(capturedSnapshots())
                 .extracting(AuctionPriceSnapshot::auctionId)
                 .containsExactlyElementsOf(
-                        IntStream.rangeClosed(17, 32).mapToObj(Long::valueOf).toList()
+                        IntStream.rangeClosed(17, 33).mapToObj(Long::valueOf).toList()
                 );
     }
 

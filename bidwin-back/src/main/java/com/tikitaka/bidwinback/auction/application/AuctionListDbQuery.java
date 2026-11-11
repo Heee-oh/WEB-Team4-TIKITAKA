@@ -44,15 +44,17 @@ public class AuctionListDbQuery {
         long offset = (long) (currentPage - FIRST_PAGE) * size;
         long candidateCountLimit = (long) AuctionListPagePolicy.MAX_PAGES * size;
 
-        List<AuctionListRow> rows = findPage(
+        List<AuctionListRow> fetched = findPage(
                 condition,
                 currentPage,
                 size,
                 candidateCountLimit,
                 offset
         );
-        // COUNT 없이 판단하므로 마지막 페이지가 정확히 16건이면 다음 페이지가 비어 있을 수 있다.
-        boolean hasNext = rows.size() == size && currentPage < AuctionListPagePolicy.MAX_PAGES;
+        // 한 건 더 읽어 size를 넘으면 다음 페이지가 있다. COUNT 없이 정확히 판단하고, 응답에는 size건만 담는다.
+        boolean exceedsPageSize = fetched.size() > size;
+        boolean hasNext = exceedsPageSize && currentPage < AuctionListPagePolicy.MAX_PAGES;
+        List<AuctionListRow> rows = exceedsPageSize ? fetched.subList(0, size) : fetched;
         return new AuctionListResponse(
                 rows.stream().map(responseMapper::toSummary).toList(),
                 responseMapper.toEpochMilli(serverTime),
@@ -62,6 +64,7 @@ public class AuctionListDbQuery {
         );
     }
 
+    /** 다음 페이지 존재 확인을 위해 최대 size + 1건을 돌려준다. */
     private List<AuctionListRow> findPage(
             AuctionListSearchCondition condition,
             int currentPage,
@@ -77,7 +80,7 @@ public class AuctionListDbQuery {
                     candidateCountLimit
             );
             case RECOMMENDED, DEADLINE, LATEST ->
-                    auctionListQueryRepository.findPage(condition, offset, size);
+                    auctionListQueryRepository.findPage(condition, offset, size + 1);
         };
     }
 
