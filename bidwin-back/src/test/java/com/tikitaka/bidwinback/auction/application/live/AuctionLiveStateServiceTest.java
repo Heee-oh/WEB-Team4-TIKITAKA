@@ -46,7 +46,7 @@ class AuctionLiveStateServiceTest {
                 .currentPrice(145_000L).bidCount(4L));
 
         // when
-        AuctionLiveState state = stateService.getState(1L);
+        AuctionLiveState state = stateService.getStates(List.of(1L)).getFirst();
 
         // then
         assertThat(state).isEqualTo(new AuctionLiveState(
@@ -63,14 +63,14 @@ class AuctionLiveStateServiceTest {
     void 공개된_밀봉_경매는_상세와_같이_밀봉_입찰수까지_합산한다() {
         stubRows(Row.up(1L).status(AuctionStatus.UNSOLD).bidCount(3L).sealedBidCount(2L));
 
-        assertThat(stateService.getState(1L).bidCount()).isEqualTo(5L);
+        assertThat(stateService.getStates(List.of(1L)).getFirst().bidCount()).isEqualTo(5L);
     }
 
     @Test
     void 공개되지_않은_밀봉_경매는_밀봉_입찰수를_노출하지_않는다() {
         stubRows(Row.up(1L).status(AuctionStatus.BID_ONGOING).bidCount(3L).sealedBidCount(2L));
 
-        assertThat(stateService.getState(1L).bidCount()).isEqualTo(3L);
+        assertThat(stateService.getStates(List.of(1L)).getFirst().bidCount()).isEqualTo(3L);
     }
 
     @Test
@@ -83,7 +83,7 @@ class AuctionLiveStateServiceTest {
         when(auctionRepository.currentDatabaseTime()).thenReturn(DATABASE_TIME);
 
         // when
-        AuctionLiveState state = stateService.getState(2L);
+        AuctionLiveState state = stateService.getStates(List.of(2L)).getFirst();
 
         // then
         assertThat(state.auctionType()).isEqualTo(AuctionType.DOWN);
@@ -100,7 +100,7 @@ class AuctionLiveStateServiceTest {
         when(auctionRepository.currentDatabaseTime()).thenReturn(DATABASE_TIME);
 
         // when
-        AuctionLiveState state = stateService.getState(2L);
+        AuctionLiveState state = stateService.getStates(List.of(2L)).getFirst();
 
         // then
         assertThat(state.currentPrice()).isEqualTo(85_000L);
@@ -111,7 +111,7 @@ class AuctionLiveStateServiceTest {
         stubRows(Row.up(1L).status(AuctionStatus.COMPLETED).revision(8L)
                 .currentPrice(1L).finalPrice(180_000L));
 
-        AuctionLiveState state = stateService.getState(1L);
+        AuctionLiveState state = stateService.getStates(List.of(1L)).getFirst();
 
         assertThat(state.currentPrice()).isEqualTo(180_000L);
         assertThat(state.revision()).isEqualTo(8L);
@@ -121,7 +121,7 @@ class AuctionLiveStateServiceTest {
     void 완료된_경매에_확정_거래가가_없으면_추정값을_SSE로_보내지_않는다() {
         stubRows(Row.up(1L).status(AuctionStatus.COMPLETED));
 
-        assertThatThrownBy(() -> stateService.getState(1L))
+        assertThatThrownBy(() -> stateService.getStates(List.of(1L)).getFirst())
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -129,7 +129,7 @@ class AuctionLiveStateServiceTest {
     void 상향_경매만_조회하면_하향_가격용_DB_시각을_조회하지_않는다() {
         stubRows(Row.up(1L).status(AuctionStatus.BID_ONGOING));
 
-        stateService.getState(1L);
+        stateService.getStates(List.of(1L)).getFirst();
 
         verify(auctionRepository, never()).currentDatabaseTime();
     }
@@ -169,7 +169,6 @@ class AuctionLiveStateServiceTest {
         // snapshot을 트랜잭션 밖(예: AFTER_COMMIT 콜백)에서 부르면 즉시 실패해야 오용이 드러난다.
         assertThat(propagationOf("snapshot", long.class)).isEqualTo(Propagation.MANDATORY);
         assertThat(propagationOf("snapshots", java.util.Collection.class)).isEqualTo(Propagation.MANDATORY);
-        assertThat(propagationOf("getState", long.class)).isEqualTo(Propagation.REQUIRES_NEW);
         assertThat(propagationOf("getStates", java.util.Collection.class)).isEqualTo(Propagation.REQUIRES_NEW);
     }
 

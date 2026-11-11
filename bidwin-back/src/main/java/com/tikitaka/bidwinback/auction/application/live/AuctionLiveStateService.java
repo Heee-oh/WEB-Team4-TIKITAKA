@@ -30,7 +30,7 @@ import static com.tikitaka.bidwinback.global.exception.ErrorCode.AUCTION_NOT_FOU
  *   <li>{@link #snapshot}, {@link #snapshots}: 쓰기 트랜잭션 안에서 부른다. 방금 쓴 값을 읽어 이벤트에 싣는다.
  *   AFTER_COMMIT 리스너가 DB를 다시 읽지 않게 하려는 용도다. 리스너에서 REQUIRES_NEW로 읽으면 원 트랜잭션의
  *   연결을 쥔 채 두 번째 연결을 기다려, 동시 트랜잭션이 풀 크기에 닿는 순간 풀 전체가 교착한다.</li>
- *   <li>{@link #getState}, {@link #getStates}: 트랜잭션 밖(SSE 연결, 알림 소비자)에서 커밋된 값을 읽는다.
+ *   <li>{@link #getStates}: 트랜잭션 밖(SSE 연결)에서 커밋된 값을 읽는다.
  *   트랜잭션 안에서 부르지 말 것: 연결을 하나 더 쥔다.</li>
  * </ul>
  */
@@ -55,11 +55,6 @@ public class AuctionLiveStateService {
     }
 
     /** 커밋된 최신 상태를 별도 읽기 트랜잭션에서 조회한다. 트랜잭션 밖에서만 부른다. */
-    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
-    public AuctionLiveState getState(long auctionId) {
-        return load(List.of(auctionId)).getFirst();
-    }
-
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public List<AuctionLiveState> getStates(Collection<Long> auctionIds) {
         return load(auctionIds);
