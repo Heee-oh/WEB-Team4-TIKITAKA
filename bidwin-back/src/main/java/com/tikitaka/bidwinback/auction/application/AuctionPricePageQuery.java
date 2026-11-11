@@ -23,24 +23,25 @@ public class AuctionPricePageQuery {
 
     private final AuctionListQueryRepository auctionListQueryRepository;
 
+    /**
+     * 가격순 목록의 한 페이지를 조회한다.
+     *
+     * @param page 1 이상, {@link AuctionListPagePolicy#MAX_PAGES} 이하. 범위 보정은 호출자(AuctionListDbQuery)가 한다.
+     */
     public List<AuctionListRow> findPage(
             AuctionListSearchCondition condition,
             int page,
             int size,
             long candidateCountLimit
     ) {
-        int normalizedPage = Math.min(
-                Math.max(1, page),
-                AuctionListPagePolicy.MAX_PAGES
-        );
-        int topKSize = topKSize(normalizedPage, size, candidateCountLimit);
+        int topKSize = topKSize(page, size, candidateCountLimit);
         if (topKSize == 0) {
             return List.of();
         }
 
         List<AuctionPriceSnapshot> orderedTopK = findSnapshots(condition, topKSize);
         int fromIndex = (int) Math.min(
-                (long) (normalizedPage - 1) * size,
+                (long) (page - 1) * size,
                 orderedTopK.size()
         );
         int toIndex = Math.min(fromIndex + size, orderedTopK.size());

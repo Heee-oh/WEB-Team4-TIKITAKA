@@ -359,13 +359,13 @@ class AuctionPricePageQueryTest {
     }
 
     @Test
-    void 상향_가격순_페이지_1_100_101은_최대_100페이지_top_k를_사용한다() {
+    void 상향_가격순_페이지_1_100은_최대_100페이지_top_k를_사용한다() {
         int size = 2;
         long candidateCountLimit = 100L * size;
 
         for (AuctionSort sort : List.of(AuctionSort.PRICE_LOW, AuctionSort.PRICE_HIGH)) {
             AuctionListSearchCondition condition = upCondition(sort);
-            for (int page : List.of(1, 100, 101)) {
+            for (int page : List.of(1, 100)) {
                 auctionPricePageQuery.findPage(
                         condition,
                         page,
@@ -375,13 +375,13 @@ class AuctionPricePageQueryTest {
             }
 
             verify(auctionListQueryRepository).findUpPriceSnapshots(condition, size);
-            verify(auctionListQueryRepository, times(2))
+            verify(auctionListQueryRepository)
                     .findUpPriceSnapshots(condition, (int) candidateCountLimit);
         }
     }
 
     @Test
-    void 하향과_ALL_가격순_페이지_1_100_101은_두_경매_유형_분기를_유지한다() {
+    void 하향과_ALL_가격순_페이지_1_100은_두_경매_유형_분기를_유지한다() {
         int size = 2;
         long candidateCountLimit = 100L * size;
 
@@ -394,7 +394,7 @@ class AuctionPricePageQueryTest {
                         eq(1_000)
                 )).thenReturn(List.of());
 
-                for (int page : List.of(1, 100, 101)) {
+                for (int page : List.of(1, 100)) {
                     auctionPricePageQuery.findPage(
                             condition,
                             page,
@@ -403,14 +403,14 @@ class AuctionPricePageQueryTest {
                     );
                 }
 
-                verify(auctionListQueryRepository, times(3)).findDownPriceCandidates(
+                verify(auctionListQueryRepository, times(2)).findDownPriceCandidates(
                         eq(condition),
                         isNull(),
                         eq(1_000)
                 );
                 if (type == null) {
                     verify(auctionListQueryRepository).findUpPriceSnapshots(condition, size);
-                    verify(auctionListQueryRepository, times(2))
+                    verify(auctionListQueryRepository)
                             .findUpPriceSnapshots(condition, (int) candidateCountLimit);
                 } else {
                     verify(auctionListQueryRepository, never())
