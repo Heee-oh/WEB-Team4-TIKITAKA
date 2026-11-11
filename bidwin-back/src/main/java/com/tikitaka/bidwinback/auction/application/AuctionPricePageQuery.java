@@ -23,27 +23,29 @@ public class AuctionPricePageQuery {
 
     private final AuctionListQueryRepository auctionListQueryRepository;
 
+    /**
+     * 가격순 목록의 한 페이지를 조회한다. 다음 페이지 존재 확인을 위해 최대 size + 1건을 돌려준다.
+     * size를 넘는 한 건이 있으면 다음 페이지가 있다는 뜻이다. 후보 상한(candidateCountLimit)에 막히면 size건까지만 온다.
+     *
+     * @param page 1 이상, {@link AuctionListPagePolicy#MAX_PAGES} 이하. 범위 보정은 호출자(AuctionListDbQuery)가 한다.
+     */
     public List<AuctionListRow> findPage(
             AuctionListSearchCondition condition,
             int page,
             int size,
             long candidateCountLimit
     ) {
-        int normalizedPage = Math.min(
-                Math.max(1, page),
-                AuctionListPagePolicy.MAX_PAGES
-        );
-        int topKSize = topKSize(normalizedPage, size, candidateCountLimit);
+        int topKSize = topKSize(page, size, candidateCountLimit);
         if (topKSize == 0) {
             return List.of();
         }
 
         List<AuctionPriceSnapshot> orderedTopK = findSnapshots(condition, topKSize);
         int fromIndex = (int) Math.min(
-                (long) (normalizedPage - 1) * size,
+                (long) (page - 1) * size,
                 orderedTopK.size()
         );
-        int toIndex = Math.min(fromIndex + size, orderedTopK.size());
+        int toIndex = Math.min(fromIndex + size + 1, orderedTopK.size());
         return auctionListQueryRepository.findRowsByPriceSnapshots(
                 orderedTopK.subList(fromIndex, toIndex),
                 condition.asOf()
@@ -149,7 +151,8 @@ public class AuctionPricePageQuery {
     }
 
     private int topKSize(int page, int size, long candidateCountLimit) {
-        long requested = Math.multiplyExact((long) page, size);
+        // 해당 페이지까지의 건수에 다음 페이지 확인용 한 건을 더한다. 후보 상한은 넘지 않는다.
+        long requested = Math.addExact(Math.multiplyExact((long) page, size), 1L);
         long required = Math.min(candidateCountLimit, requested);
         if (required > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("가격순으로 조회할 페이지 범위가 너무 큽니다.");

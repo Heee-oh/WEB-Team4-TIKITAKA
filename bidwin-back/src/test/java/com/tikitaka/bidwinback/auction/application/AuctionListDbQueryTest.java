@@ -69,7 +69,7 @@ class AuctionListDbQueryTest {
     void projection을_UP_DOWN_경매_응답으로_매핑하고_썸네일_URL을_변환한다() {
         AuctionListRow up = upRow(1L, "up-thumbnail", 260_000L, 4L);
         AuctionListRow down = downRow(2L, "down-thumbnail", 170_000L);
-        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(16)))
+        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(17)))
                 .thenReturn(List.of(up, down));
         when(imageUrlResolver.resolve("up-thumbnail")).thenReturn("https://cdn/up.jpg");
         when(imageUrlResolver.resolve("down-thumbnail")).thenReturn("https://cdn/down.jpg");
@@ -110,7 +110,7 @@ class AuctionListDbQueryTest {
         verify(auctionListQueryRepository).findPage(
                 eq(new AuctionListSearchCondition(null, AuctionSort.LATEST, null, AS_OF)),
                 eq(0L),
-                eq(16)
+                eq(17)
         );
         verify(auctionListQueryRepository, never()).count(any());
     }
@@ -126,7 +126,7 @@ class AuctionListDbQueryTest {
         verify(auctionListQueryRepository).findPage(
                 eq(new AuctionListSearchCondition(null, AuctionSort.LATEST, null, SERVER_TIME)),
                 eq(0L),
-                eq(16)
+                eq(17)
         );
     }
 
@@ -146,7 +146,7 @@ class AuctionListDbQueryTest {
                         SERVER_TIME
                 )),
                 eq(0L),
-                eq(16)
+                eq(17)
         );
     }
 
@@ -172,13 +172,13 @@ class AuctionListDbQueryTest {
                         AS_OF
                 )),
                 eq(0L),
-                eq(16)
+                eq(17)
         );
     }
 
     @Test
     void 페이지_크기보다_적게_조회되면_다음_페이지가_없다() {
-        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(16)))
+        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(17)))
                 .thenReturn(List.of(upRow(1L, null, 100_000L, 0L), upRow(2L, null, 200_000L, 1L)));
 
         AuctionListResponse response = auctionListDbQuery.findPage(
@@ -192,21 +192,36 @@ class AuctionListDbQueryTest {
     }
 
     @Test
-    void 페이지_크기만큼_조회되면_다음_페이지가_있다() {
-        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(16)))
-                .thenReturn(fullPageRows());
+    void 페이지_크기보다_한_건_더_조회되면_다음_페이지가_있고_응답은_페이지_크기만_담는다() {
+        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(17)))
+                .thenReturn(rows(17));
 
         AuctionListResponse response = auctionListDbQuery.findPage(
                 query(null, AuctionSort.LATEST, null, 1)
         );
 
         assertThat(response.hasNext()).isTrue();
+        assertThat(response.items()).hasSize(16);
+        assertThat(response.items().getLast().auctionId()).isEqualTo(16L);
     }
 
     @Test
-    void 상한_페이지는_가득_차도_다음_페이지가_없다() {
-        when(auctionListQueryRepository.findPage(any(), eq(1_584L), eq(16)))
-                .thenReturn(fullPageRows());
+    void 페이지_크기만큼만_조회되면_마지막_페이지라서_다음_페이지가_없다() {
+        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(17)))
+                .thenReturn(rows(16));
+
+        AuctionListResponse response = auctionListDbQuery.findPage(
+                query(null, AuctionSort.LATEST, null, 1)
+        );
+
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.items()).hasSize(16);
+    }
+
+    @Test
+    void 상한_페이지는_다음_건이_있어도_다음_페이지가_없다() {
+        when(auctionListQueryRepository.findPage(any(), eq(1_584L), eq(17)))
+                .thenReturn(rows(17));
 
         AuctionListResponse response = auctionListDbQuery.findPage(
                 query(null, AuctionSort.LATEST, null, 100)
@@ -239,7 +254,7 @@ class AuctionListDbQueryTest {
 
     @Test
     void page가_1보다_작으면_첫_페이지와_offset_0으로_보정한다() {
-        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(16)))
+        when(auctionListQueryRepository.findPage(any(), eq(0L), eq(17)))
                 .thenReturn(List.of(upRow(1L, null, 100_000L, 0L), upRow(2L, null, 200_000L, 1L)));
 
         AuctionListResponse response = auctionListDbQuery.findPage(
@@ -247,7 +262,7 @@ class AuctionListDbQueryTest {
         );
 
         assertThat(response.page()).isEqualTo(1);
-        verify(auctionListQueryRepository).findPage(any(), eq(0L), eq(16));
+        verify(auctionListQueryRepository).findPage(any(), eq(0L), eq(17));
     }
 
     @Test
@@ -264,7 +279,7 @@ class AuctionListDbQueryTest {
         assertThat(page100.hasNext()).isFalse();
         assertThat(page101.hasNext()).isFalse();
         verify(auctionListQueryRepository, times(2))
-                .findPage(any(), eq(1_584L), eq(16));
+                .findPage(any(), eq(1_584L), eq(17));
     }
 
     @Test
@@ -275,7 +290,7 @@ class AuctionListDbQueryTest {
 
         assertThat(response.items()).isEmpty();
         assertThat(response.hasNext()).isFalse();
-        verify(auctionListQueryRepository).findPage(any(), eq(0L), eq(16));
+        verify(auctionListQueryRepository).findPage(any(), eq(0L), eq(17));
         verify(auctionListQueryRepository, never()).count(any());
     }
 
@@ -293,8 +308,8 @@ class AuctionListDbQueryTest {
         return new AuctionListQuery(type, sort, keyword, null, null, page, asOf);
     }
 
-    private List<AuctionListRow> fullPageRows() {
-        return LongStream.rangeClosed(1L, 16L)
+    private List<AuctionListRow> rows(long count) {
+        return LongStream.rangeClosed(1L, count)
                 .mapToObj(id -> upRow(id, null, 100_000L, 0L))
                 .toList();
     }

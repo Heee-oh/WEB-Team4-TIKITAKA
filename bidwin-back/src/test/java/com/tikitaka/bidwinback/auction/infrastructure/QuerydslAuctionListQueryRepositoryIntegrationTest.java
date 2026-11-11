@@ -1352,12 +1352,13 @@ class QuerydslAuctionListQueryRepositoryIntegrationTest {
             throw new IllegalArgumentException("가격순 테스트 페이지의 offset이 limit 배수가 아닙니다.");
         }
         int page = Math.toIntExact(offset / limit) + 1;
+        // 가격순 조회는 다음 페이지 확인용으로 한 건을 더 줄 수 있으므로 페이지 크기로 자른다.
         return auctionPricePageQuery.findPage(
                 condition,
                 page,
                 limit,
                 auctionListQueryRepository.count(condition)
-        );
+        ).stream().limit(limit).toList();
     }
 
     private long countByKeyword(String keyword) {

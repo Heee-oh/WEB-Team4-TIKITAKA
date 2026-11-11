@@ -68,19 +68,6 @@ tasks.named('bootJar') {
     archiveFileName = 'app.jar'
 }
 
-tasks.register('bidLedgerApiTest', Test) {
-    description = '실제 Redis 입찰 API와 충전·즉시구매·마감·정산 통합 검증'
-    group = 'verification'
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
-    useJUnitPlatform()
-    include '**/RedisBidApiIntegrationTest.class'
-    systemProperty 'user.timezone', 'Asia/Seoul'
-    systemProperty 'bidwin.ledger-api.enabled', 'true'
-    systemProperty 'bidwin.ledger-api.classpath', sourceSets.test.runtimeClasspath.asPath
-    outputs.upToDateWhen { false }
-}
-
 tasks.named('jacocoTestReport') {
     dependsOn tasks.named('test')
     reports {

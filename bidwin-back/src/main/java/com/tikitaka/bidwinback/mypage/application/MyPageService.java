@@ -1,7 +1,6 @@
 package com.tikitaka.bidwinback.mypage.application;
 
 import com.tikitaka.bidwinback.auction.domain.entity.Auction;
-import com.tikitaka.bidwinback.auction.application.bid.ledger.RedisBidRuntime;
 import com.tikitaka.bidwinback.auction.domain.entity.AuctionTrade;
 import com.tikitaka.bidwinback.auction.domain.entity.DownAuction;
 import com.tikitaka.bidwinback.auction.domain.enums.AuctionStatus;
@@ -26,7 +25,6 @@ import com.tikitaka.bidwinback.mypage.presentation.dto.response.ProfileResponse;
 import com.tikitaka.bidwinback.mypage.presentation.dto.response.SellingItemResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -57,12 +55,6 @@ public class MyPageService {
     private final BidRepository bidRepository;
     private final ImageRepository imageRepository;
     private final ImageUrlResolver imageUrlResolver;
-    private RedisBidRuntime redisBidRuntime;
-
-    @Autowired(required = false)
-    void setRedisBidRuntime(RedisBidRuntime runtime) {
-        this.redisBidRuntime = runtime;
-    }
 
     @Transactional(readOnly = true)
     public MyPageResponse getMyPage(long memberId) {
@@ -106,8 +98,7 @@ public class MyPageService {
     }
 
     private DepositResponse toDeposit(Member member) {
-        DepositResponse balance = new DepositResponse(member.getTotalPoint(), member.getLockedPoint());
-        return redisBidRuntime == null ? balance : redisBidRuntime.cachedBalance(member.getId(), balance);
+        return new DepositResponse(member.getTotalPoint(), member.getLockedPoint());
     }
 
     private ActiveTradeResponse toActiveTrade(

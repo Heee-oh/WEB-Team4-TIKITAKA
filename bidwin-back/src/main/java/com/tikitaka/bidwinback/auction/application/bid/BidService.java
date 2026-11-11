@@ -18,8 +18,7 @@ import static com.tikitaka.bidwinback.global.exception.ErrorCode.BID_PRICE_TOO_L
  * 교착한다. 그래서 첫 연결을 반납한 뒤 여기서 처리한다.
  *
  * <p>이 클래스에 @Transactional을 붙이면 위 보장이 깨진다. BidServiceTransactionBoundaryTest가 막는다.
- * 호출자는 트랜잭션 밖에서 불러야 한다(Redis 원장 모드의 워커처럼 이미 트랜잭션 안인 경로는 Redis 선점을 쓰지 않는
- * 밀봉 입찰뿐이라 재동기화가 필요 없다).
+ * 호출자는 트랜잭션 밖에서 불러야 한다.
  */
 @Slf4j
 @Service

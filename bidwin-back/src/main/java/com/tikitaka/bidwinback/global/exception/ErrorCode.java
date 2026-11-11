@@ -254,21 +254,6 @@ public enum ErrorCode {
     ),
 
     // Bid
-    BID_LEDGER_UNAVAILABLE(
-            HttpStatus.SERVICE_UNAVAILABLE,
-            "BID_503_1",
-            "입찰 기록을 처리 중입니다. 동일 요청 ID로 결과를 확인하거나 재시도해주세요."
-    ),
-    IDEMPOTENCY_KEY_REQUIRED(
-            HttpStatus.BAD_REQUEST,
-            "BID_400_3",
-            "이 요청은 Idempotency-Key 헤더가 필요합니다. 응답을 받지 못했다면 같은 키로 다시 시도해주세요."
-    ),
-    BID_REQUEST_CONFLICT(
-            HttpStatus.CONFLICT,
-            "BID_409_7",
-            "동일 요청 ID를 다른 내용으로 사용할 수 없습니다."
-    ),
     BID_PRICE_TOO_LOW(
             HttpStatus.UNPROCESSABLE_CONTENT,
             "BID_422_1",
